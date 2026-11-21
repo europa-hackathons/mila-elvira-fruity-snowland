@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#11164a">
+  <title>Mila &amp; Elvira Fruity Snowland</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #171546;
+      --pink: #ff5ba7;
+      --aqua: #51e4e6;
+      --gold: #ffe66d;
+      --white: #fffdf8;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 18px;
+      display: grid;
+      place-items: center;
+      overflow-x: hidden;
+      color: var(--white);
+      font-family: "Trebuchet MS", "Arial Rounded MT Bold", system-ui, sans-serif;
+      background:
+        radial-gradient(ellipse at 50% 0%, #456bd0 0%, transparent 55%),
+        linear-gradient(155deg, #151747 0%, #25205e 56%, #4b246c 100%);
+    }
+
+    button { font: inherit; }
+    .game-shell { width: min(100%, 1060px); }
+    .brand {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin: 0 auto 13px;
+      text-align: center;
+      filter: drop-shadow(0 4px 0 #16113e);
+    }
+    .brand-mark { font-size: clamp(24px, 5vw, 42px); }
+    h1 {
+      margin: 0;
+      color: #fff9d8;
+      font-size: clamp(20px, 4vw, 35px);
+      line-height: 1.05;
+      letter-spacing: .03em;
+      text-shadow: 0 3px 0 #de4c9f, 0 6px 0 #33205e;
+    }
+    .subtitle { margin-top: 5px; color: #c9faff; font-size: 12px; font-weight: 900; letter-spacing: .2em; }
+
+    .cabinet {
+      position: relative;
+      overflow: hidden;
+      padding: 13px;
+      border: 4px solid #fff3a7;
+      border-radius: 26px;
+      background: linear-gradient(145deg, #fa60b0, #8138bf 45%, #3543a4);
+      box-shadow: 0 0 0 4px #542b9c, 0 16px 0 #1b174c, 0 22px 35px #0a1039aa, inset 0 2px 0 #ffffffa8;
+    }
+    .cabinet::before, .cabinet::after {
+      position: absolute;
+      z-index: 0;
+      content: "";
+      width: 130px;
+      height: 130px;
+      border: 2px dotted #ffffff38;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .cabinet::before { top: -60px; left: -40px; }
+    .cabinet::after { right: -40px; bottom: -70px; }
+    .screen {
+      position: relative;
+      min-height: 585px;
+      overflow: hidden;
+      border: 4px solid #202057;
+      border-radius: 17px;
+      background: #d7f8ff;
+      box-shadow: inset 0 0 20px #17164b88;
+    }
+    .screen::after {
+      position: absolute;
+      z-index: 1;
+      inset: 0;
+      content: "";
+      pointer-events: none;
+      opacity: .14;
+      background: repeating-linear-gradient(0deg, transparent 0 3px, #13205d 4px 5px);
+    }
+    .game-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .hud {
+      position: absolute;
+      z-index: 2;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .hud[hidden], .mobile-controls[hidden] { display: none; }
+    .hud-chip {
+      min-width: 90px;
+      padding: 8px 13px;
+      border: 3px solid #fff;
+      border-radius: 15px;
+      color: #fff;
+      background: #25215bdc;
+      box-shadow: 0 4px 0 #15133d, 0 0 15px #ffffff5c;
+      text-align: center;
+      text-shadow: 0 2px #15133d;
+    }
+    .hud-chip small { display: block; color: #c9fbff; font-size: 10px; font-weight: 900; letter-spacing: .15em; }
+    .hud-chip strong { display: block; margin-top: 1px; font-size: clamp(17px, 3vw, 23px); line-height: 1; }
+    .timer-chip strong { color: var(--gold); font-variant-numeric: tabular-nums; }
+    .timer-chip.urgent strong { color: #ff737c; animation: pulse .5s infinite alternate; }
+    .hud-right { display: flex; gap: 7px; }
+    .sound-toggle {
+      width: 42px;
+      height: 42px;
+      padding: 0;
+      border: 3px solid #fff;
+      border-radius: 13px;
+      color: white;
+      background: #25215bdc;
+      box-shadow: 0 4px 0 #15133d;
+      font-size: 19px;
+      cursor: pointer;
+      pointer-events: auto;
+    }
+
+    .screen-panel {
+      position: absolute;
+      z-index: 3;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 22px;
+      background: #20205b3a;
+    }
+    .screen-panel[hidden] { display: none; }
+    .card {
+      width: min(100%, 690px);
+      max-height: 100%;
+      overflow: auto;
+      padding: clamp(17px, 4vw, 29px);
+      border: 4px solid #fff;
+      border-radius: 25px;
+      color: var(--ink);
+      background: linear-gradient(155deg, #fffef4, #e6fcff);
+      box-shadow: 0 9px 0 #473185, 0 16px 30px #12104788;
+      text-align: center;
+    }
+    .card h2 {
+      margin: 0 0 8px;
+      color: #ef4e9f;
+      font-size: clamp(24px, 5vw, 40px);
+      line-height: 1;
+      text-shadow: 0 2px #ffd773;
+    }
+    .card p { margin: 8px auto 13px; max-width: 540px; font-size: 15px; line-height: 1.45; }
+    .character-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin: 14px 0;
+    }
+    .character-button {
+      min-width: 0;
+      padding: 9px 3px 8px;
+      border: 3px solid #d5ccff;
+      border-radius: 16px;
+      color: var(--ink);
+      background: white;
+      cursor: pointer;
+      transition: transform .12s, border-color .12s, background .12s;
+    }
+    .character-button:hover { transform: translateY(-3px); }
+    .character-button.selected { border-color: #ff55a7; background: #fff2f8; box-shadow: 0 0 0 2px #ffacd1; }
+    .avatar {
+      display: block;
+      width: 49px;
+      height: 57px;
+      margin: 0 auto 5px;
+    }
+    .character-button strong { display: block; font-size: 12px; }
+    .character-button small { color: #675f8e; font-size: 10px; }
+    .character-color-picker {
+      margin: 8px auto 12px;
+      padding: 10px;
+      border: 2px dashed #7e69d8;
+      border-radius: 15px;
+      background: #f3edff;
+    }
+    .character-color-picker strong { display: block; color: #5541b2; font-size: 14px; }
+    .color-swatches { display: flex; justify-content: center; flex-wrap: wrap; gap: 9px; margin: 9px 0; }
+    .color-swatch {
+      width: 31px;
+      height: 31px;
+      padding: 0;
+      border: 3px solid white;
+      border-radius: 50%;
+      background: var(--swatch-color);
+      box-shadow: 0 0 0 2px #cfc5ec;
+      cursor: pointer;
+    }
+    .color-swatch[aria-pressed="true"] { box-shadow: 0 0 0 3px #ef4e9f; transform: scale(1.12); }
+    .favorite-fruit-note { margin: 5px auto 0 !important; color: #5143a0; font-size: 12px !important; font-weight: 800; }
+    .primary-button, .secondary-button, .letter-button, .erase-button {
+      border: 0;
+      border-radius: 13px;
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform .1s, filter .1s;
+    }
+    .primary-button:hover, .secondary-button:hover, .letter-button:hover, .erase-button:hover { transform: translateY(-2px); filter: brightness(1.05); }
+    .primary-button, .secondary-button { padding: 11px 22px; }
+    .primary-button {
+      margin-top: 14px;
+      border: 3px solid white;
+      color: #fff;
+      background: linear-gradient(#ff63ad, #ed3697);
+      box-shadow: 0 5px 0 #a62178;
+      font-size: 18px;
+      text-shadow: 0 2px #a62178;
+    }
+    .secondary-button { color: #fff; background: #6253c5; box-shadow: 0 4px 0 #392c85; }
+    .fine-print { margin-top: 12px !important; color: #69628e; font-size: 11px !important; }
+    .mobile-controls { display: none; }
+
+    .lucky-badge {
+      position: absolute;
+      z-index: 2;
+      left: 50%;
+      top: 67px;
+      max-width: calc(100% - 24px);
+      padding: 8px 12px;
+      transform: translateX(-50%);
+      border: 2px solid #fff;
+      border-radius: 14px;
+      color: #fff;
+      background: #27205dcc;
+      font-size: 12px;
+      font-weight: 900;
+      text-align: center;
+      box-shadow: 0 3px 0 #181544;
+    }
+    .lucky-badge[hidden] { display: none; }
+    .upgrade-badge {
+      position: absolute;
+      z-index: 2;
+      left: 50%;
+      top: 108px;
+      padding: 7px 11px;
+      transform: translateX(-50%);
+      border: 2px solid #ffe66d;
+      border-radius: 14px;
+      color: #fff8c7;
+      background: #482c8ddd;
+      font-size: 11px;
+      font-weight: 1000;
+      text-align: center;
+      box-shadow: 0 3px 0 #181544, 0 0 15px #f4c7ff99;
+    }
+    .upgrade-badge[hidden] { display: none; }
+
+    .initial-display {
+      min-height: 46px;
+      margin: 12px auto;
+      color: #ff4d9d;
+      font-size: 35px;
+      font-weight: 1000;
+      letter-spacing: .35em;
+    }
+    .letter-grid {
+      display: grid;
+      grid-template-columns: repeat(13, minmax(20px, 1fr));
+      gap: 4px;
+      margin: 10px auto;
+    }
+    .letter-button, .erase-button {
+      padding: 6px 2px;
+      color: #31295d;
+      background: #f2eaff;
+      box-shadow: 0 2px 0 #c7b7ef;
+    }
+    .erase-button { grid-column: span 3; color: white; background: #6355c7; box-shadow: 0 2px 0 #41358e; }
+    .leaderboard { width: min(100%, 350px); margin: 12px auto 0; border-collapse: collapse; }
+    .leaderboard th { padding: 5px 8px; color: #675ca1; font-size: 11px; text-transform: uppercase; }
+    .leaderboard td { padding: 7px 8px; border-top: 1px solid #ddd6f4; font-weight: 900; }
+    .leaderboard td:first-child { color: #ef4e9f; }
+    .score-row-current { color: #ce3582; background: #fff0f8; }
+    .gameover-score { color: #5143b8; font-size: 21px; font-weight: 1000; }
+    .notice { min-height: 18px; margin: 3px 0 !important; color: #d13d7f; font-size: 12px !important; font-weight: 900; }
+
+    .cabinet-footer {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 11px 4px 1px;
+      color: #fff5d5;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-shadow: 0 2px #38215f;
+    }
+    .shake { animation: shake .2s linear; }
+    @keyframes shake {
+      0%, 100% { transform: translate(0,0); }
+      20% { transform: translate(-5px,2px); }
+      40% { transform: translate(4px,-2px); }
+      60% { transform: translate(-3px,-1px); }
+      80% { transform: translate(3px,2px); }
+    }
+    @keyframes pulse { to { transform: scale(1.08); } }
+    @keyframes pop { from { opacity: 0; transform: translate(-50%, 8px) scale(.9); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+
+    @media (max-width: 620px) {
+      body { padding: 10px 8px 17px; }
+      .cabinet { padding: 8px; border-radius: 20px; }
+      .screen { min-height: min(72vh, 590px); }
+      .hud { top: 8px; left: 8px; right: 8px; }
+      .hud-chip { min-width: 72px; padding: 7px 9px; border-width: 2px; border-radius: 12px; }
+      .hud-chip small { font-size: 8px; }
+      .sound-toggle { width: 37px; height: 37px; border-width: 2px; }
+      .screen-panel { padding: 10px; }
+      .card { padding: 15px 12px; border-width: 3px; border-radius: 20px; }
+      .card p { font-size: 13px; }
+      .character-grid { gap: 4px; }
+      .character-button { padding: 6px 1px; border-width: 2px; border-radius: 11px; }
+      .avatar { width: 39px; height: 47px; }
+      .character-button strong { font-size: 10px; }
+      .character-button small { font-size: 8px; }
+      .mobile-controls {
+        position: absolute;
+        z-index: 2;
+        right: 12px;
+        bottom: 12px;
+        left: 12px;
+        display: flex;
+        justify-content: space-between;
+        pointer-events: none;
+      }
+      .mobile-controls button {
+        width: 64px;
+        height: 57px;
+        border: 3px solid #fff;
+        border-radius: 17px;
+        color: #fff;
+        background: #29235bc7;
+        box-shadow: 0 4px 0 #171542;
+        font-size: 27px;
+        font-weight: 900;
+        pointer-events: auto;
+        touch-action: none;
+      }
+      .cabinet-footer { font-size: 9px; }
+      .letter-grid { gap: 3px; }
+      .letter-button, .erase-button { padding: 6px 0; font-size: 11px; }
+    }
+    @media (max-height: 700px) and (min-width: 621px) {
+      .screen { min-height: min(76vh, 585px); }
+      .card { padding-top: 16px; padding-bottom: 16px; }
+      .character-grid { margin: 9px 0; }
+    }
+  </style>
+</head>
+<body>
+  <main class="game-shell">
+    <header class="brand">
+      <span class="brand-mark" aria-hidden="true">🍓</span>
+      <div>
+        <h1>Mila &amp; Elvira<br>Fruity Snowland</h1>
+        <div class="subtitle">THE SWEETEST SNOWBALL ARCADE!</div>
+      </div>
+      <span class="brand-mark" aria-hidden="true">❄️</span>
+    </header>
+
+    <section class="cabinet" aria-label="Fruity Snowland arcade cabinet">
+      <div class="screen" id="screen">
+        <canvas class="game-canvas" id="gameCanvas" aria-label="Game field"></canvas>
+        <div class="hud" id="hud" hidden>
+          <div class="hud-chip"><small>SCORE</small><strong id="scoreValue">0000</strong></div>
+          <div class="hud-chip timer-chip" id="timerChip"><small>TIME LEFT</small><strong id="timerValue">2:00</strong></div>
+          <div class="hud-right">
+            <div class="hud-chip"><small>BEST</small><strong id="bestValue">0000</strong></div>
+            <button type="button" class="sound-toggle" id="soundToggle" aria-label="Turn sound off" title="Toggle sound">🔊</button>
+          </div>
+        </div>
+
+        <section class="screen-panel" id="startPanel" aria-labelledby="startTitle">
+          <div class="card">
+            <h2 id="startTitle">Pick your snow buddy!</h2>
+            <p>Catch the juicy fruit, dodge the icky snowballs, and make the snow sparkle. Choose one of six magical friends!</p>
+            <div class="character-grid" id="characterGrid"></div>
+            <div class="character-color-picker">
+              <strong id="colorPickerLabel">Choose Luna's color</strong>
+              <div class="color-swatches" id="colorSwatches" role="group" aria-label="Character colors"></div>
+              <p class="favorite-fruit-note" id="favoriteFruitNote"></p>
+            </div>
+            <button type="button" class="primary-button" id="startButton">LET'S PLAY! ✨</button>
+            <p class="fine-print">← → move · catch fruit · dodge brown &amp; yellow snowballs · 2 minutes</p>
+          </div>
+        </section>
+
+        <section class="screen-panel" id="gameOverPanel" aria-labelledby="gameOverTitle" hidden>
+          <div class="card">
+            <h2 id="gameOverTitle">SNOW MUCH FUN!</h2>
+            <p class="gameover-score">Your score: <span id="finalScore">0</span></p>
+            <p id="initialPrompt">Enter your 3 initials for the high-score board!</p>
+            <div class="initial-display" id="initialDisplay" aria-live="polite">___</div>
+            <p class="notice" id="initialNotice" aria-live="polite"></p>
+            <div class="letter-grid" id="letterGrid" aria-label="Choose three initials"></div>
+            <button type="button" class="secondary-button" id="eraseInitial" aria-label="Delete last initial">⌫ DELETE</button>
+            <button type="button" class="primary-button" id="saveScoreButton">SAVE MY SCORE! 🏆</button>
+            <div id="leaderboardWrap" hidden>
+              <h3>❄️ TOP 5 SNOW STARS ❄️</h3>
+              <table class="leaderboard">
+                <thead><tr><th>Rank</th><th>Initials</th><th>Score</th></tr></thead>
+                <tbody id="leaderboardBody"></tbody>
+              </table>
+              <button type="button" class="primary-button" id="playAgainButton">PLAY AGAIN</button>
+            </div>
+          </div>
+        </section>
+
+        <div class="lucky-badge" id="luckyBadge" hidden></div>
+        <div class="upgrade-badge" id="upgradeBadge" hidden>✨ EXTENDED ARMS <span id="upgradeTimer"></span></div>
+        <div class="mobile-controls" id="mobileControls" hidden>
+          <button type="button" id="leftButton" aria-label="Move left">◀</button>
+          <button type="button" id="rightButton" aria-label="Move right">▶</button>
+        </div>
+      </div>
+      <div class="cabinet-footer">
+        <span>★ FRUITS = POINTS · SNOWBALLS = OOPS! ★</span>
+        <span>ARROW KEYS TO MOVE</span>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const ROUND_SECONDS = 120;
+      const STORAGE_KEY = "milaElviraFruitySnowlandScores";
+      const characters = [
+        { name: "Luna Lovegood", role: "Dreamy believer", hair: "#d9c5a6", coat: "#356ca8", scarf: "#cfd8e8", hat: "#2b568b", girl: true, favoriteFruit: "orange", house: "Ravenclaw", glasses: "spectrespecs", hairStyle: "long" },
+        { name: "Ginny Weasley", role: "Brave seeker", hair: "#a9422b", coat: "#8e2635", scarf: "#d7b34b", hat: "#6d1d2b", girl: true, favoriteFruit: "strawberry", house: "Gryffindor", hairStyle: "ponytail" },
+        { name: "Ron Weasley", role: "Loyal jokester", hair: "#a9422b", coat: "#8e2635", scarf: "#d7b34b", hat: "#6d1d2b", girl: false, favoriteFruit: "apple", house: "Gryffindor", freckles: true },
+        { name: "Hermione Granger", role: "Clever scholar", hair: "#6b432d", coat: "#8e2635", scarf: "#d7b34b", hat: "#6d1d2b", girl: true, favoriteFruit: "blueberry", house: "Gryffindor", hairStyle: "bushy" },
+        { name: "Harry Potter", role: "Courageous hero", hair: "#241d22", coat: "#8e2635", scarf: "#d7b34b", hat: "#6d1d2b", girl: false, favoriteFruit: "kiwi", house: "Gryffindor", glasses: "round", scar: true },
+        { name: "Neville Longbottom", role: "Kind-hearted hero", hair: "#795239", coat: "#8e2635", scarf: "#d7b34b", hat: "#6d1d2b", girl: false, favoriteFruit: "pineapple", house: "Gryffindor", freckles: true }
+      ];
+      const colorOptions = [
+        { name: "Berry pink", value: "#ff5da9" },
+        { name: "Grape purple", value: "#aa67ed" },
+        { name: "Ice blue", value: "#41bfe3" },
+        { name: "Mint green", value: "#4bc58a" },
+        { name: "Tangerine", value: "#ff9f46" },
+        { name: "Cherry red", value: "#ed5260" },
+        { name: "Snow white", value: "#f5f4ff" }
+      ];
+      const fruitTypes = {
+        strawberry: { emoji: "🍓", points: 10, color: "#f34973" },
+        orange: { emoji: "🍊", points: 10, color: "#ff9d38" },
+        blueberry: { emoji: "🫐", points: 10, color: "#7778ed" },
+        kiwi: { emoji: "🥝", points: 15, color: "#85c94a" },
+        apple: { emoji: "🍎", points: 12, color: "#ed5260" },
+        pineapple: { emoji: "🍍", points: 20, color: "#f0bf3f" }
+      };
+      const $ = (id) => document.getElementById(id);
+      const canvas = $("gameCanvas");
+      const ctx = canvas.getContext("2d");
+      const screen = $("screen");
+      const hud = $("hud");
+      const startPanel = $("startPanel");
+      const gameOverPanel = $("gameOverPanel");
+      const mobileControls = $("mobileControls");
+      const state = {
+        phase: "start",
+        selectedCharacter: 0,
+        characterColors: characters.map((character) => character.coat),
+        luckyFruit: characters[0].favoriteFruit,
+        score: 0,
+        best: 0,
+        elapsed: 0,
+        lastFrame: 0,
+        spawnClock: 0,
+        objects: [],
+        particles: [],
+        popups: [],
+        levelAnnouncement: null,
+        playerX: 0.5,
+        held: { left: false, right: false },
+        initials: "",
+        scores: [],
+        soundOn: true,
+        audio: null,
+        musicTimer: null,
+        musicStep: 0,
+        combo: 0,
+        lastCatchAt: -10,
+        frozenUntil: 0,
+        armUpgradeUntil: 0,
+        speedStage: 0,
+        shake: 0,
+        lastTimeLabel: ROUND_SECONDS
+      };
+
+      function safeScores() {
+        try {
+          const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+          if (!Array.isArray(stored)) return [];
+          return stored.filter((entry) =>
+            entry && typeof entry.initials === "string" && /^[A-Z]{3}$/.test(entry.initials) &&
+            Number.isFinite(entry.score) && entry.score >= 0
+          ).map((entry) => ({ initials: entry.initials, score: Math.floor(entry.score) }))
+            .sort((a, b) => b.score - a.score).slice(0, 5);
+        } catch (error) {
+          console.warn("Could not read the Fruity Snowland leaderboard.", error);
+          return [];
+        }
+      }
+
+      function saveScores(scores) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(scores));
+          return true;
+        } catch (error) {
+          console.error("Could not save the Fruity Snowland leaderboard.", error);
+          $("initialNotice").textContent = "Your score couldn't be saved in this browser.";
+          return false;
+        }
+      }
+
+      function roundedRect(context, x, y, width, height, radius) {
+        const r = Math.min(radius, width / 2, height / 2);
+        context.beginPath();
+        context.moveTo(x + r, y);
+        context.arcTo(x + width, y, x + width, y + height, r);
+        context.arcTo(x + width, y + height, x, y + height, r);
+        context.arcTo(x, y + height, x, y, r);
+        context.arcTo(x, y, x + width, y, r);
+        context.closePath();
+      }
+
+      function avatarSvg(character, index) {
+        const hairShape = character.girl
+          ? `<path d="M12 27 Q9 5 26 5 Q44 6 41 28 L39 46 Q34 39 34 29 L19 29 Q18 39 13 44Z" fill="${character.hair}"/>`
+          : `<path d="M12 23 Q11 5 27 5 Q42 6 40 23 L36 19 Q26 13 17 21Z" fill="${character.hair}"/>`;
+        const glasses = character.glasses === "round"
+          ? `<circle cx="21" cy="25" r="6" fill="none" stroke="#382555" stroke-width="1.5"/><circle cx="33" cy="25" r="6" fill="none" stroke="#382555" stroke-width="1.5"/><path d="M27 25h1" stroke="#382555" stroke-width="1.5"/>`
+          : character.glasses === "spectrespecs"
+            ? `<circle cx="20" cy="25" r="6" fill="#e6a8ef88" stroke="#7d4da3" stroke-width="1.5"/><circle cx="34" cy="25" r="6" fill="#e6a8ef88" stroke="#7d4da3" stroke-width="1.5"/><path d="M26 25h2" stroke="#7d4da3" stroke-width="1.5"/>`
+            : "";
+        const scar = character.scar ? `<path d="M30 14l-2 5 3 3-3 5" fill="none" stroke="#c34a4e" stroke-width="1.5"/>` : "";
+        const freckles = character.freckles ? `<circle cx="18" cy="29" r="1" fill="#b46d4a"/><circle cx="22" cy="30" r="1" fill="#b46d4a"/><circle cx="32" cy="30" r="1" fill="#b46d4a"/><circle cx="36" cy="29" r="1" fill="#b46d4a"/>` : "";
+        return `<svg class="avatar" viewBox="0 0 54 62" role="img" aria-label="${character.name}, ${character.role}">
+          <ellipse cx="27" cy="58" rx="20" ry="3" fill="#aaa0d1"/>
+          <path d="M14 43 Q27 36 40 43 L46 58 H8Z" fill="${character.coat}" stroke="#34265c" stroke-width="2"/>
+          <path d="M19 42 L27 50 L35 42" fill="${character.scarf}" stroke="#34265c" stroke-width="1.5"/>
+          ${hairShape}
+          <ellipse cx="27" cy="25" rx="13" ry="15" fill="#ffd7b5" stroke="#34265c" stroke-width="1.5"/>
+          <circle cx="22" cy="25" r="1.5" fill="#34265c"/><circle cx="32" cy="25" r="1.5" fill="#34265c"/>
+          ${glasses}${scar}${freckles}
+          <path d="M23 31 Q27 34 31 31" fill="none" stroke="#e46b72" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M10 19 Q13 4 27 5 Q42 5 44 19 Q28 14 10 19Z" fill="${character.hat}" stroke="#34265c" stroke-width="2"/>
+          <circle cx="27" cy="5" r="4" fill="#fff5c9" stroke="#34265c" stroke-width="1.5"/>
+          <text x="27" y="55" font-size="0">${index}</text>
+        </svg>`;
+      }
+
+      function characterWithColor(index) {
+        const character = characters[index];
+        const color = state.characterColors[index];
+        return { ...character, coat: color, hat: color };
+      }
+
+      function renderColorChoices() {
+        const container = $("colorSwatches");
+        container.innerHTML = "";
+        colorOptions.forEach((option) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "color-swatch";
+          button.style.setProperty("--swatch-color", option.value);
+          button.title = option.name;
+          button.setAttribute("aria-label", option.name);
+          button.setAttribute("aria-pressed", String(state.characterColors[state.selectedCharacter] === option.value));
+          button.addEventListener("click", () => {
+            state.characterColors[state.selectedCharacter] = option.value;
+            renderCharacterChoices();
+          });
+          container.appendChild(button);
+        });
+      }
+
+      function renderCharacterChoices() {
+        const grid = $("characterGrid");
+        grid.innerHTML = "";
+        characters.forEach((character, index) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = `character-button${index === state.selectedCharacter ? " selected" : ""}`;
+          button.setAttribute("aria-pressed", String(index === state.selectedCharacter));
+          button.innerHTML = `${avatarSvg(characterWithColor(index), index)}<strong>${character.name}</strong><small>${character.role}</small>`;
+          button.addEventListener("click", () => {
+            state.selectedCharacter = index;
+            state.luckyFruit = character.favoriteFruit;
+            renderCharacterChoices();
+            playTone(580, 0.07, "sine");
+          });
+          grid.appendChild(button);
+        });
+        const selected = characters[state.selectedCharacter];
+        const fruit = fruitTypes[selected.favoriteFruit];
+        $("colorPickerLabel").textContent = `Choose ${selected.name}'s color`;
+        $("favoriteFruitNote").textContent = `${fruit.emoji} ${selected.name}'s lucky fruit is ${fruit.emoji}. Catch it for +10 points and a happy tune!`;
+        renderColorChoices();
+      }
+
+      function resizeCanvas() {
+        const rect = screen.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      function dims() {
+        return { width: screen.clientWidth, height: screen.clientHeight };
+      }
+
+      function random(min, max) { return min + Math.random() * (max - min); }
+
+      function drawBackground(now) {
+        const { width, height } = dims();
+        const gradient = ctx.createLinearGradient(0, 0, 0, height);
+        gradient.addColorStop(0, "#101936");
+        gradient.addColorStop(0.58, "#273b69");
+        gradient.addColorStop(1, "#8797bd");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.fillStyle = "#f8e9b0";
+        ctx.beginPath();
+        ctx.arc(width * .82, 83, 28, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#273b69";
+        ctx.beginPath();
+        ctx.arc(width * .84, 76, 25, 0, Math.PI * 2);
+        ctx.fill();
+
+        for (let i = 0; i < 24; i++) {
+          const x = (i * 97 + 32) % Math.max(1, width);
+          const y = 24 + ((i * 53) % Math.max(100, height * .54));
+          ctx.globalAlpha = 0.4 + (i % 3) * 0.18;
+          ctx.fillStyle = i % 4 === 0 ? "#f8e9b0" : "#d9e8ff";
+          ctx.beginPath();
+          ctx.arc(x, y + Math.sin(now / 1000 + i) * 2, 1 + i % 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        const castleBase = height - 104;
+        ctx.fillStyle = "#171b38";
+        ctx.beginPath();
+        ctx.moveTo(0, castleBase + 22);
+        ctx.lineTo(width * .08, castleBase + 5);
+        ctx.lineTo(width * .16, castleBase + 14);
+        ctx.lineTo(width * .24, castleBase - 24);
+        ctx.lineTo(width * .31, castleBase + 2);
+        ctx.lineTo(width * .39, castleBase - 47);
+        ctx.lineTo(width * .47, castleBase - 8);
+        ctx.lineTo(width * .54, castleBase - 34);
+        ctx.lineTo(width * .62, castleBase - 4);
+        ctx.lineTo(width * .73, castleBase - 26);
+        ctx.lineTo(width * .82, castleBase + 4);
+        ctx.lineTo(width, castleBase - 4);
+        ctx.lineTo(width, height);
+        ctx.lineTo(0, height);
+        ctx.fill();
+
+        function tower(x, base, towerWidth, towerHeight, spireColor) {
+          ctx.fillStyle = "#303653";
+          ctx.fillRect(x - towerWidth / 2, base - towerHeight, towerWidth, towerHeight);
+          ctx.fillStyle = "#465170";
+          ctx.fillRect(x - towerWidth / 2 + 5, base - towerHeight + 8, towerWidth - 10, towerHeight - 8);
+          ctx.fillStyle = spireColor;
+          ctx.beginPath();
+          ctx.moveTo(x - towerWidth * .66, base - towerHeight);
+          ctx.lineTo(x, base - towerHeight - towerWidth * .72);
+          ctx.lineTo(x + towerWidth * .66, base - towerHeight);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = "#f6d982";
+          for (let row = 0; row < 3; row++) {
+            ctx.fillRect(x - towerWidth * .24, base - towerHeight + 16 + row * 22, towerWidth * .12, 8);
+            ctx.fillRect(x + towerWidth * .12, base - towerHeight + 16 + row * 22, towerWidth * .12, 8);
+          }
+        }
+
+        const mainBase = castleBase + 10;
+        ctx.fillStyle = "#39425f";
+        ctx.fillRect(width * .22, mainBase - 92, width * .56, 92);
+        ctx.fillStyle = "#505c79";
+        ctx.fillRect(width * .27, mainBase - 82, width * .46, 82);
+        tower(width * .24, mainBase + 4, 48, 142, "#242943");
+        tower(width * .39, mainBase - 4, 42, 187, "#242943");
+        tower(width * .61, mainBase - 4, 42, 187, "#242943");
+        tower(width * .76, mainBase + 4, 48, 142, "#242943");
+        ctx.fillStyle = "#1c203c";
+        ctx.beginPath();
+        ctx.moveTo(width * .43, mainBase - 92);
+        ctx.lineTo(width * .5, mainBase - 152);
+        ctx.lineTo(width * .57, mainBase - 92);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#f6d982";
+        ctx.fillRect(width * .485, mainBase - 70, width * .03, 70);
+        ctx.fillStyle = "#e7eefb";
+        ctx.fillRect(width * .46, mainBase - 93, width * .08, 4);
+        ctx.fillStyle = "#f6d982";
+        for (let row = 0; row < 2; row++) {
+          for (let col = 0; col < 7; col++) {
+            ctx.fillRect(width * .29 + col * width * .063, mainBase - 62 + row * 26, 7, 11);
+          }
+        }
+        ctx.fillStyle = "#dce8f8";
+        ctx.fillRect(0, height - 35, width, 35);
+      }
+
+      function drawPlayer() {
+        const { width, height } = dims();
+        const character = characterWithColor(state.selectedCharacter);
+        const x = state.playerX * width;
+        const y = height - 85;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.fillStyle = "#5864a9";
+        ctx.beginPath();
+        ctx.ellipse(0, 46, 34, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "#ffd1b0";
+        ctx.lineWidth = 9;
+        ctx.beginPath();
+        ctx.moveTo(-20, 2); ctx.lineTo(-29, 19);
+        ctx.moveTo(20, 2); ctx.lineTo(29, 19);
+        ctx.stroke();
+        if (state.elapsed < state.armUpgradeUntil) {
+          ctx.strokeStyle = "#ffe66d";
+          ctx.lineWidth = 10;
+          ctx.shadowColor = "#f4c7ff";
+          ctx.shadowBlur = 12;
+          ctx.beginPath();
+          ctx.moveTo(-17, 0); ctx.lineTo(-58, -10);
+          ctx.moveTo(17, 0); ctx.lineTo(58, -10);
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = "#ffd1b0";
+          ctx.beginPath();
+          ctx.arc(-62, -11, 7, 0, Math.PI * 2);
+          ctx.arc(62, -11, 7, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = character.coat;
+        ctx.beginPath();
+        ctx.moveTo(-20, -8); ctx.quadraticCurveTo(0, -21, 20, -8);
+        ctx.lineTo(29, 37); ctx.quadraticCurveTo(0, 47, -29, 37);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "#382555";
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        ctx.fillStyle = character.scarf;
+        ctx.beginPath();
+        ctx.moveTo(-10, -13); ctx.quadraticCurveTo(0, -5, 10, -13);
+        ctx.lineTo(7, 6); ctx.lineTo(17, 21); ctx.lineTo(8, 24); ctx.lineTo(-1, 8); ctx.lineTo(-9, 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        if (character.hairStyle === "bushy") {
+          ctx.fillStyle = character.hair;
+          ctx.beginPath();
+          ctx.ellipse(0, -33, 27, 28, 0, 0, Math.PI * 2);
+          ctx.fill();
+          for (let curl = -2; curl <= 2; curl++) {
+            ctx.beginPath();
+            ctx.arc(curl * 11, -51 - Math.abs(curl) * 2, 8, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        } else if (character.hairStyle === "ponytail") {
+          ctx.fillStyle = character.hair;
+          ctx.beginPath();
+          ctx.ellipse(0, -31, 24, 27, 0, 0, Math.PI * 2);
+          ctx.ellipse(24, -31, 10, 18, .2, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (character.hairStyle === "long") {
+          ctx.fillStyle = character.hair;
+          ctx.beginPath();
+          ctx.ellipse(0, -31, 24, 28, 0, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (character.girl) {
+          ctx.fillStyle = character.hair;
+          ctx.beginPath();
+          ctx.ellipse(0, -31, 25, 27, 0, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillStyle = character.hair;
+          ctx.beginPath();
+          ctx.ellipse(0, -34, 23, 16, 0, Math.PI, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = "#ffd7b8";
+        ctx.beginPath();
+        ctx.ellipse(0, -32, 19, 22, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#382555";
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        if (character.glasses === "round") {
+          ctx.strokeStyle = "#30264f";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(-9, -32, 8, 0, Math.PI * 2);
+          ctx.arc(9, -32, 8, 0, Math.PI * 2);
+          ctx.moveTo(-1, -32); ctx.lineTo(1, -32);
+          ctx.stroke();
+        } else if (character.glasses === "spectrespecs") {
+          ctx.strokeStyle = "#8750a7";
+          ctx.fillStyle = "#e7b5ee55";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(-10, -32, 8, 0, Math.PI * 2);
+          ctx.arc(10, -32, 8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
+        if (character.scar) {
+          ctx.strokeStyle = "#c34a4e";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(5, -52); ctx.lineTo(1, -45); ctx.lineTo(6, -40); ctx.lineTo(2, -34);
+          ctx.stroke();
+        }
+        if (character.freckles) {
+          ctx.fillStyle = "#b46d4a";
+          for (let i = -1; i <= 1; i++) {
+            ctx.beginPath(); ctx.arc(i * 6 - 4, -26 + Math.abs(i), 1.4, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(i * 6 + 4, -26 + Math.abs(i), 1.4, 0, Math.PI * 2); ctx.fill();
+          }
+        }
+        ctx.fillStyle = character.hair;
+        ctx.beginPath();
+        ctx.ellipse(0, -49, 23, 10, -0.08, Math.PI, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = character.hat;
+        roundedRect(ctx, -19, -63, 38, 19, 8);
+        ctx.fill();
+        ctx.strokeStyle = "#382555";
+        ctx.stroke();
+        ctx.fillStyle = "#fff4bf";
+        ctx.beginPath();
+        ctx.arc(0, -65, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#30264f";
+        ctx.beginPath();
+        ctx.arc(-7, -32, 2, 0, Math.PI * 2);
+        ctx.arc(7, -32, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#da6c74";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, -26, 5, 0.2, Math.PI - 0.2);
+        ctx.stroke();
+        if (state.phase === "playing" && state.elapsed < state.frozenUntil) {
+          ctx.fillStyle = "#b9f4ff88";
+          ctx.strokeStyle = "#eaffff";
+          ctx.lineWidth = 4;
+          roundedRect(ctx, -35, -72, 70, 126, 23);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = "#fff";
+          ctx.font = "1000 13px 'Trebuchet MS', sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(`FROZEN ${Math.ceil(state.frozenUntil - state.elapsed)}`, 0, -81);
+        }
+        ctx.restore();
+      }
+
+      function drawObject(item) {
+        ctx.save();
+        ctx.translate(item.x, item.y);
+        ctx.rotate(item.rotation);
+        if (item.kind === "upgrade") {
+          ctx.shadowColor = "#e7a9ff";
+          ctx.shadowBlur = 18;
+          ctx.fillStyle = "#9c51db";
+          ctx.strokeStyle = "#ffe66d";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(0, 0, item.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = "#fff8c7";
+          ctx.font = "1000 18px sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("↔", 0, 1);
+        } else if (item.kind === "fruit") {
+          const fruit = fruitTypes[item.fruit];
+          ctx.shadowColor = fruit.color;
+          ctx.shadowBlur = 12;
+          ctx.fillStyle = "#fff8d8";
+          ctx.beginPath();
+          ctx.arc(0, 0, item.radius + 3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.font = `${item.radius * 1.8}px "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(fruit.emoji, 0, 1);
+        } else {
+          ctx.fillStyle = item.kind === "badSnow" ? "#8b5a3d" : "#f2cd3a";
+          ctx.strokeStyle = item.kind === "badSnow" ? "#61391f" : "#bd8d18";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(0, 0, item.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = "#ffffff99";
+          ctx.beginPath();
+          ctx.arc(-item.radius * .3, -item.radius * .3, item.radius * .27, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#fff4cc";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(-item.radius * .65, -item.radius * .55);
+          ctx.lineTo(item.radius * .65, item.radius * .55);
+          ctx.moveTo(item.radius * .65, -item.radius * .55);
+          ctx.lineTo(-item.radius * .65, item.radius * .55);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      function drawParticles(delta) {
+        for (let i = state.particles.length - 1; i >= 0; i--) {
+          const particle = state.particles[i];
+          particle.x += particle.vx * delta;
+          particle.y += particle.vy * delta;
+          particle.vy += 100 * delta;
+          particle.life -= delta;
+          ctx.globalAlpha = Math.max(0, particle.life / particle.maxLife);
+          ctx.fillStyle = particle.color;
+          ctx.beginPath();
+          ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+          ctx.fill();
+          if (particle.life <= 0) state.particles.splice(i, 1);
+        }
+        ctx.globalAlpha = 1;
+        for (let i = state.popups.length - 1; i >= 0; i--) {
+          const popup = state.popups[i];
+          popup.y -= 32 * delta;
+          popup.life -= delta;
+          ctx.globalAlpha = Math.min(1, popup.life * 2);
+          ctx.font = "1000 25px 'Trebuchet MS', sans-serif";
+          ctx.textAlign = "center";
+          ctx.lineWidth = 5;
+          ctx.strokeStyle = "#4a287c";
+          ctx.strokeText(popup.text, popup.x, popup.y);
+          ctx.fillStyle = popup.color;
+          ctx.fillText(popup.text, popup.x, popup.y);
+          if (popup.life <= 0) state.popups.splice(i, 1);
+        }
+        ctx.globalAlpha = 1;
+        if (state.levelAnnouncement) {
+          const announcement = state.levelAnnouncement;
+          announcement.life -= delta;
+          if (announcement.life <= 0) {
+            state.levelAnnouncement = null;
+          } else {
+            const { width, height } = dims();
+            const fadeIn = Math.min(1, (announcement.maxLife - announcement.life) / .16);
+            const fadeOut = Math.min(1, announcement.life / .45);
+            const scale = 1 + Math.min(.18, (announcement.maxLife - announcement.life) * .18);
+            ctx.save();
+            ctx.globalAlpha = fadeIn * fadeOut;
+            ctx.translate(width / 2, height * .42);
+            ctx.scale(scale, scale);
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.font = "1000 64px 'Trebuchet MS', sans-serif";
+            ctx.lineWidth = 9;
+            ctx.strokeStyle = "#34205f";
+            ctx.strokeText(`LEVEL ${announcement.level}!`, 0, 0);
+            ctx.fillStyle = "#fff16d";
+            ctx.fillText(`LEVEL ${announcement.level}!`, 0, 0);
+            ctx.font = "1000 19px 'Trebuchet MS', sans-serif";
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = "#34205f";
+            ctx.strokeText("SPEED UP!", 0, 53);
+            ctx.fillStyle = "#ff8ed0";
+            ctx.fillText("SPEED UP!", 0, 53);
+            ctx.restore();
+            ctx.globalAlpha = 1;
+          }
+        }
+      }
+
+      function render(now, delta) {
+        const { width, height } = dims();
+        if (!width || !height) return;
+        ctx.clearRect(0, 0, width, height);
+        ctx.save();
+        if (state.shake > 0) {
+          ctx.translate(random(-state.shake, state.shake), random(-state.shake, state.shake));
+          state.shake = Math.max(0, state.shake - delta * 28);
+        }
+        drawBackground(now);
+        state.objects.forEach(drawObject);
+        if (state.phase === "playing" || state.phase === "over") drawPlayer();
+        drawParticles(delta);
+        ctx.restore();
+      }
+
+      function speedMultiplier() {
+        if (state.elapsed >= 90) return 2.4;
+        if (state.elapsed >= 60) return 1.8;
+        if (state.elapsed >= 30) return 1.35;
+        return 1;
+      }
+
+      function spawnObject() {
+        const { width } = dims();
+        const multiplier = speedMultiplier();
+        const upgrade = Math.random() < 0.07;
+        const hazard = !upgrade && Math.random() < 0.37;
+        const item = {
+          x: random(24, Math.max(25, width - 24)),
+          y: -30,
+          radius: upgrade ? 18 : hazard ? random(14, 19) : random(18, 23),
+          rotation: random(-.15, .15),
+          spin: random(-1, 1),
+          vy: random(105, 155) * multiplier,
+          kind: upgrade ? "upgrade" : hazard ? (Math.random() < .5 ? "badSnow" : "yellowSnow") : "fruit"
+        };
+        if (!hazard && !upgrade) {
+          const available = Object.keys(fruitTypes);
+          item.fruit = available[Math.floor(Math.random() * available.length)];
+        }
+        state.objects.push(item);
+      }
+
+      function burst(x, y, color, count) {
+        for (let i = 0; i < count; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = random(35, 155);
+          state.particles.push({
+            x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+            life: random(.35, .75), maxLife: .75, size: random(2, 5), color
+          });
+        }
+      }
+
+      function popup(text, x, y, color) {
+        state.popups.push({ text, x, y, color, life: 1 });
+      }
+
+      function playTone(frequency, duration, type, volume) {
+        if (!state.soundOn) return;
+        try {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContextClass) return;
+          if (!state.audio) state.audio = new AudioContextClass();
+          if (state.audio.state === "suspended") state.audio.resume();
+          const oscillator = state.audio.createOscillator();
+          const gain = state.audio.createGain();
+          oscillator.type = type || "sine";
+          oscillator.frequency.setValueAtTime(frequency, state.audio.currentTime);
+          gain.gain.setValueAtTime(volume || .08, state.audio.currentTime);
+          gain.gain.exponentialRampToValueAtTime(.001, state.audio.currentTime + duration);
+          oscillator.connect(gain);
+          gain.connect(state.audio.destination);
+          oscillator.start();
+          oscillator.stop(state.audio.currentTime + duration);
+        } catch (error) {
+          console.warn("Audio is unavailable in this browser.", error);
+        }
+      }
+
+      function soundCatch() {
+        playTone(660, .09, "sine", .08);
+        window.setTimeout(() => playTone(880, .1, "sine", .06), 65);
+      }
+
+      function speakPhrase(phrase) {
+        if (!state.soundOn || !("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") return;
+        try {
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(phrase);
+          utterance.rate = 1.05;
+          utterance.pitch = 1.2;
+          window.speechSynthesis.speak(utterance);
+        } catch (error) {
+          console.warn("Spoken game phrases are unavailable in this browser.", error);
+        }
+      }
+
+      function playPhraseTune(phrase, notes, wave) {
+        speakPhrase(phrase);
+        notes.forEach((note, index) => {
+          window.setTimeout(() => playTone(note, .16, wave || "triangle", .065), index * 145);
+        });
+      }
+
+      function playMusicStep() {
+        if (!state.soundOn || state.phase !== "playing") {
+          state.musicTimer = null;
+          return;
+        }
+        const melody = [523, 659, 784, 659, 587, 740, 880, 740, 698, 880, 1047, 880, 784, 659, 587, 659];
+        const note = melody[state.musicStep % melody.length];
+        playTone(note, .19, "triangle", .025);
+        if (state.musicStep % 4 === 0) playTone(note / 2, .28, "sine", .018);
+        state.musicStep++;
+        state.musicTimer = window.setTimeout(playMusicStep, 235);
+      }
+
+      function stopMusic() {
+        if (state.musicTimer !== null) window.clearTimeout(state.musicTimer);
+        state.musicTimer = null;
+      }
+
+      function startMusic() {
+        stopMusic();
+        if (!state.soundOn || state.phase !== "playing") return;
+        state.musicStep = 0;
+        playMusicStep();
+      }
+
+      function setScore(next) {
+        state.score = Math.max(0, next);
+        $("scoreValue").textContent = String(state.score).padStart(4, "0");
+      }
+
+      function updateSpeedStage() {
+        const stage = state.elapsed >= 90 ? 3 : state.elapsed >= 60 ? 2 : state.elapsed >= 30 ? 1 : 0;
+        if (stage <= state.speedStage) return;
+        state.speedStage = stage;
+        state.levelAnnouncement = { level: stage + 1, life: 1.8, maxLife: 1.8 };
+        popup(stage === 3 ? "FINAL BLIZZARD!" : "SPEED UP!", dims().width / 2, 142, "#ff8ed0");
+        playTone(stage === 3 ? 660 : 440, .18, "square", .055);
+      }
+
+      function updateTimer() {
+        const seconds = Math.max(0, Math.ceil(ROUND_SECONDS - state.elapsed));
+        if (seconds !== state.lastTimeLabel) {
+          state.lastTimeLabel = seconds;
+          const minutes = Math.floor(seconds / 60);
+          const remainder = seconds % 60;
+          $("timerValue").textContent = `${minutes}:${String(remainder).padStart(2, "0")}`;
+          $("timerChip").classList.toggle("urgent", seconds <= 30);
+        }
+      }
+
+      function catchItem(item) {
+        if (item.kind === "upgrade") {
+          state.armUpgradeUntil = state.elapsed + 10;
+          burst(item.x, item.y, "#e7a9ff", 18);
+          popup("EXTENDED ARMS!", item.x, item.y - 20, "#ffe66d");
+          playPhraseTune("Extended arms", [523, 659, 784], "triangle");
+        } else if (item.kind === "fruit") {
+          if (state.elapsed - state.lastCatchAt < 2.2) state.combo++;
+          else state.combo = 1;
+          state.lastCatchAt = state.elapsed;
+          const lucky = item.fruit === state.luckyFruit;
+          let points = fruitTypes[item.fruit].points + (lucky ? 10 : 0);
+          if (state.combo >= 3) {
+            points += 10;
+            popup(state.combo >= 5 ? "SUPER!" : "COMBO!", item.x, item.y - 20, "#ff4fa5");
+            state.shake = 3;
+          } else if (lucky) {
+            popup("LUCKY +20!", item.x, item.y - 20, "#fff16d");
+          }
+          setScore(state.score + points);
+          burst(item.x, item.y, fruitTypes[item.fruit].color, 13);
+          if (lucky) playPhraseTune("Happy, happy, happy", [659, 784, 988, 784, 1047]);
+          else soundCatch();
+        } else {
+          state.combo = 0;
+          setScore(state.score - 15);
+          state.frozenUntil = state.elapsed + 3;
+          state.shake = 9;
+          burst(item.x, item.y, item.kind === "badSnow" ? "#a16643" : "#f1d24e", 12);
+          popup("FROZEN!", item.x, item.y - 15, "#a9f6ff");
+          playPhraseTune("Emotional Damage", [440, 349, 294, 220], "sawtooth");
+        }
+      }
+
+      function tick(now) {
+        const delta = Math.min(.05, Math.max(0, (now - state.lastFrame) / 1000));
+        state.lastFrame = now;
+        if (state.phase === "playing") {
+          state.elapsed = Math.min(ROUND_SECONDS, (now - state.startedAt) / 1000);
+          updateTimer();
+          updateSpeedStage();
+          if (state.elapsed >= ROUND_SECONDS) {
+            finishRound();
+          } else {
+            const upgradeActive = state.elapsed < state.armUpgradeUntil;
+            $("upgradeBadge").hidden = !upgradeActive;
+            if (upgradeActive) $("upgradeTimer").textContent = `${Math.ceil(state.armUpgradeUntil - state.elapsed)}s`;
+            const { width, height } = dims();
+            const moveSpeed = 390 * delta / Math.max(width, 1);
+            if (state.elapsed >= state.frozenUntil) {
+              if (state.held.left) state.playerX -= moveSpeed;
+              if (state.held.right) state.playerX += moveSpeed;
+            }
+            state.playerX = Math.max(.045, Math.min(.955, state.playerX));
+
+            const multiplier = speedMultiplier();
+            state.spawnClock += delta;
+            const spawnInterval = Math.max(.25, .78 / multiplier);
+            while (state.spawnClock >= spawnInterval) {
+              state.spawnClock -= spawnInterval;
+              spawnObject();
+            }
+            const playerY = height - 85;
+            const playerX = state.playerX * width;
+            for (let i = state.objects.length - 1; i >= 0; i--) {
+              const item = state.objects[i];
+              item.y += item.vy * delta;
+              item.rotation += item.spin * delta;
+              const dx = item.x - playerX;
+              const dy = item.y - (playerY - 18);
+              const reach = item.kind === "fruit" && state.elapsed < state.armUpgradeUntil ? 70 : 26;
+              if (Math.hypot(dx, dy) < item.radius + reach) {
+                if (state.elapsed >= state.frozenUntil) catchItem(item);
+                state.objects.splice(i, 1);
+              } else if (item.y > height + 35) {
+                state.objects.splice(i, 1);
+              }
+            }
+          }
+        }
+        render(now, delta);
+        window.requestAnimationFrame(tick);
+      }
+
+      function startRound() {
+        state.phase = "playing";
+        state.score = 0;
+        state.elapsed = 0;
+        state.spawnClock = 0;
+        state.objects = [];
+        state.particles = [];
+        state.popups = [];
+        state.levelAnnouncement = null;
+        state.combo = 0;
+        state.lastCatchAt = -10;
+        state.frozenUntil = 0;
+        state.armUpgradeUntil = 0;
+        state.speedStage = 0;
+        state.lastTimeLabel = ROUND_SECONDS;
+        state.playerX = .5;
+        state.startedAt = performance.now();
+        state.lastFrame = state.startedAt;
+        state.held.left = false;
+        state.held.right = false;
+        setScore(0);
+        $("timerValue").textContent = "2:00";
+        $("timerChip").classList.remove("urgent");
+        $("upgradeBadge").hidden = true;
+        startPanel.hidden = true;
+        gameOverPanel.hidden = true;
+        hud.hidden = false;
+        mobileControls.hidden = false;
+        const character = characters[state.selectedCharacter];
+        const luckyFruit = fruitTypes[character.favoriteFruit];
+        $("luckyBadge").textContent = `${luckyFruit.emoji} ${character.name.toUpperCase()}'S LUCKY FRUIT +10`;
+        $("luckyBadge").hidden = false;
+        $("bestValue").textContent = String(state.best).padStart(4, "0");
+        playTone(520, .12, "triangle", .08);
+        startMusic();
+      }
+
+      function renderLeaderboard(highlightIndex) {
+        const body = $("leaderboardBody");
+        body.innerHTML = "";
+        state.scores.forEach((entry, index) => {
+          const row = document.createElement("tr");
+          if (index === highlightIndex) row.className = "score-row-current";
+          row.innerHTML = `<td>${["🥇", "🥈", "🥉", "4", "5"][index]}</td><td>${entry.initials}</td><td>${entry.score}</td>`;
+          body.appendChild(row);
+        });
+      }
+
+      function finishRound() {
+        if (state.phase !== "playing") return;
+        state.phase = "over";
+        state.elapsed = ROUND_SECONDS;
+        stopMusic();
+        if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+        $("timerValue").textContent = "0:00";
+        $("timerChip").classList.add("urgent");
+        state.held.left = false;
+        state.held.right = false;
+        $("finalScore").textContent = String(state.score);
+        state.initials = "";
+        $("initialDisplay").textContent = "___";
+        $("initialNotice").textContent = "";
+        $("initialPrompt").hidden = false;
+        $("letterGrid").hidden = false;
+        $("eraseInitial").hidden = false;
+        $("saveScoreButton").hidden = false;
+        $("leaderboardWrap").hidden = true;
+        gameOverPanel.hidden = false;
+        mobileControls.hidden = true;
+        $("luckyBadge").hidden = true;
+        $("upgradeBadge").hidden = true;
+        playTone(330, .18, "triangle", .07);
+        window.setTimeout(() => playTone(220, .32, "triangle", .07), 170);
+      }
+
+      function buildLetterPad() {
+        const pad = $("letterGrid");
+        for (let code = 65; code <= 90; code++) {
+          const letter = String.fromCharCode(code);
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "letter-button";
+          button.textContent = letter;
+          button.setAttribute("aria-label", `Add ${letter}`);
+          button.addEventListener("click", () => addInitial(letter));
+          pad.appendChild(button);
+        }
+      }
+
+      function addInitial(letter) {
+        if (state.phase !== "over" || state.initials.length >= 3 || !/^[A-Z]$/.test(letter)) return;
+        state.initials += letter;
+        $("initialDisplay").textContent = state.initials.padEnd(3, "_").split("").join(" ");
+        $("initialNotice").textContent = "";
+        playTone(540, .045, "square", .035);
+      }
+
+      function eraseInitial() {
+        state.initials = state.initials.slice(0, -1);
+        $("initialDisplay").textContent = state.initials.padEnd(3, "_").split("").join(" ");
+        $("initialNotice").textContent = "";
+      }
+
+      function submitScore() {
+        if (state.initials.length !== 3) {
+          $("initialNotice").textContent = "Choose exactly 3 letters first!";
+          playTone(180, .1, "square", .05);
+          return;
+        }
+        const nextScores = [...state.scores, { initials: state.initials, score: state.score }]
+          .sort((a, b) => b.score - a.score).slice(0, 5);
+        const saved = saveScores(nextScores);
+        if (!saved) return;
+        state.scores = nextScores;
+        const rank = state.scores.findIndex((entry) => entry.initials === state.initials && entry.score === state.score);
+        renderLeaderboard(rank);
+        $("initialPrompt").hidden = true;
+        $("letterGrid").hidden = true;
+        $("eraseInitial").hidden = true;
+        $("saveScoreButton").hidden = true;
+        $("leaderboardWrap").hidden = false;
+        $("initialDisplay").textContent = state.initials;
+        playTone(880, .2, "triangle", .08);
+      }
+
+      function resetToStart() {
+        stopMusic();
+        state.phase = "start";
+        state.objects = [];
+        state.particles = [];
+        state.popups = [];
+        state.scores = safeScores();
+        state.best = state.scores.length ? state.scores[0].score : 0;
+        hud.hidden = true;
+        mobileControls.hidden = true;
+        $("luckyBadge").hidden = true;
+        gameOverPanel.hidden = true;
+        startPanel.hidden = false;
+        $("bestValue").textContent = String(state.best).padStart(4, "0");
+        renderCharacterChoices();
+      }
+
+      function bindMovementButton(button, direction) {
+        const stop = (event) => {
+          event.preventDefault();
+          state.held[direction] = false;
+        };
+        button.addEventListener("pointerdown", (event) => {
+          event.preventDefault();
+          state.held[direction] = true;
+          if (button.setPointerCapture) button.setPointerCapture(event.pointerId);
+        });
+        button.addEventListener("pointerup", stop);
+        button.addEventListener("pointercancel", stop);
+        button.addEventListener("lostpointercapture", stop);
+        button.addEventListener("contextmenu", (event) => event.preventDefault());
+      }
+
+      function wireEvents() {
+        $("startButton").addEventListener("click", startRound);
+        $("saveScoreButton").addEventListener("click", submitScore);
+        $("eraseInitial").addEventListener("click", eraseInitial);
+        $("playAgainButton").addEventListener("click", resetToStart);
+        $("soundToggle").addEventListener("click", () => {
+          state.soundOn = !state.soundOn;
+          $("soundToggle").textContent = state.soundOn ? "🔊" : "🔇";
+          $("soundToggle").setAttribute("aria-label", state.soundOn ? "Turn sound off" : "Turn sound on");
+          if (state.soundOn) {
+            playTone(660, .08, "sine", .06);
+            startMusic();
+          } else {
+            stopMusic();
+            if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+          }
+        });
+        bindMovementButton($("leftButton"), "left");
+        bindMovementButton($("rightButton"), "right");
+
+        window.addEventListener("keydown", (event) => {
+          if (state.phase === "playing" && ["ArrowLeft", "ArrowRight", " "].includes(event.key)) event.preventDefault();
+          if (event.key === "ArrowLeft" && state.phase === "playing") state.held.left = true;
+          if (event.key === "ArrowRight" && state.phase === "playing") state.held.right = true;
+          if (state.phase === "over" && /^[a-z]$/i.test(event.key)) addInitial(event.key.toUpperCase());
+          if (state.phase === "over" && event.key === "Backspace") eraseInitial();
+          if (state.phase === "over" && event.key === "Enter" && !$("saveScoreButton").hidden) submitScore();
+        });
+        window.addEventListener("keyup", (event) => {
+          if (event.key === "ArrowLeft") state.held.left = false;
+          if (event.key === "ArrowRight") state.held.right = false;
+        });
+        window.addEventListener("blur", () => {
+          state.held.left = false;
+          state.held.right = false;
+        });
+        window.addEventListener("resize", resizeCanvas);
+      }
+
+      state.scores = safeScores();
+      state.best = state.scores.length ? state.scores[0].score : 0;
+      renderCharacterChoices();
+      buildLetterPad();
+      wireEvents();
+      resizeCanvas();
+      $("bestValue").textContent = String(state.best).padStart(4, "0");
+      window.requestAnimationFrame((time) => {
+        state.lastFrame = time;
+        tick(time);
+      });
+    })();
+  </script>
+</body>
+</html>
