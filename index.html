@@ -31,7 +31,13 @@
         linear-gradient(155deg, #151747 0%, #25205e 56%, #4b246c 100%);
     }
 
-    button { font: inherit; }
+    button {
+      font: inherit;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+    }
     .game-shell { width: min(100%, 1060px); }
     .brand {
       display: flex;
@@ -370,6 +376,9 @@
         font-weight: 900;
         pointer-events: auto;
         touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
       }
       .cabinet-footer { font-size: 9px; }
       .letter-grid { gap: 3px; }
@@ -1090,26 +1099,39 @@
         state.popups.push({ text, x, y, color, life: 1 });
       }
 
-      function playTone(frequency, duration, type, volume) {
-        if (!state.soundOn) return;
+      async function ensureAudioReady() {
+        if (!state.soundOn) return null;
         try {
           const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-          if (!AudioContextClass) return;
+          if (!AudioContextClass) return null;
           if (!state.audio) state.audio = new AudioContextClass();
-          if (state.audio.state === "suspended") state.audio.resume();
-          const oscillator = state.audio.createOscillator();
-          const gain = state.audio.createGain();
-          oscillator.type = type || "sine";
-          oscillator.frequency.setValueAtTime(frequency, state.audio.currentTime);
-          gain.gain.setValueAtTime(volume || .08, state.audio.currentTime);
-          gain.gain.exponentialRampToValueAtTime(.001, state.audio.currentTime + duration);
-          oscillator.connect(gain);
-          gain.connect(state.audio.destination);
-          oscillator.start();
-          oscillator.stop(state.audio.currentTime + duration);
+          if (state.audio.state === "suspended") await state.audio.resume();
+          return state.audio;
         } catch (error) {
           console.warn("Audio is unavailable in this browser.", error);
+          return null;
         }
+      }
+
+      function playTone(frequency, duration, type, volume) {
+        if (!state.soundOn) return;
+        ensureAudioReady().then((audio) => {
+          if (!audio) return;
+          try {
+            const oscillator = audio.createOscillator();
+            const gain = audio.createGain();
+            oscillator.type = type || "sine";
+            oscillator.frequency.setValueAtTime(frequency, audio.currentTime);
+            gain.gain.setValueAtTime(volume || .08, audio.currentTime);
+            gain.gain.exponentialRampToValueAtTime(.001, audio.currentTime + duration);
+            oscillator.connect(gain);
+            gain.connect(audio.destination);
+            oscillator.start();
+            oscillator.stop(audio.currentTime + duration);
+          } catch (error) {
+            console.warn("Audio is unavailable in this browser.", error);
+          }
+        });
       }
 
       function soundCatch() {
@@ -1434,6 +1456,12 @@
         $("saveScoreButton").addEventListener("click", submitScore);
         $("eraseInitial").addEventListener("click", eraseInitial);
         $("playAgainButton").addEventListener("click", resetToStart);
+        document.addEventListener("pointerdown", () => {
+          ensureAudioReady();
+        }, { passive: true });
+        document.addEventListener("touchstart", () => {
+          ensureAudioReady();
+        }, { passive: true });
         $("soundToggle").addEventListener("click", () => {
           state.soundOn = !state.soundOn;
           $("soundToggle").textContent = state.soundOn ? "🔊" : "🔇";
