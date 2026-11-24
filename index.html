@@ -561,6 +561,8 @@
         scores: [],
         soundOn: true,
         audio: null,
+        speechUtterance: null,
+        speechTimer: null,
         musicTimer: null,
         musicStep: 0,
         combo: 0,
@@ -1195,10 +1197,39 @@
       function speakPhrase(phrase) {
         if (!state.soundOn || !("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") return;
         try {
+          if (state.speechTimer !== null) window.clearTimeout(state.speechTimer);
           window.speechSynthesis.cancel();
           const utterance = new SpeechSynthesisUtterance(phrase);
+          utterance.lang = "en-US";
           utterance.rate = 1.05;
           utterance.pitch = 1.2;
+          utterance.volume = 1;
+          const voices = window.speechSynthesis.getVoices();
+          const preferredVoice = voices.find((voice) => voice.lang.toLowerCase().startsWith("en")) || voices[0];
+          if (preferredVoice) utterance.voice = preferredVoice;
+          state.speechUtterance = utterance;
+          utterance.onend = () => {
+            if (state.speechUtterance === utterance) state.speechUtterance = null;
+          };
+          utterance.onerror = (event) => {
+            console.warn("Spoken game phrases are unavailable in this browser.", event.error);
+            if (state.speechUtterance === utterance) state.speechUtterance = null;
+          };
+          state.speechTimer = window.setTimeout(() => {
+            state.speechTimer = null;
+            window.speechSynthesis.speak(utterance);
+          }, 50);
+        } catch (error) {
+          console.warn("Spoken game phrases are unavailable in this browser.", error);
+        }
+      }
+
+      function primeSpeech() {
+        if (!state.soundOn || !("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") return;
+        try {
+          const utterance = new SpeechSynthesisUtterance(" ");
+          utterance.lang = "en-US";
+          utterance.volume = 0;
           window.speechSynthesis.speak(utterance);
         } catch (error) {
           console.warn("Spoken game phrases are unavailable in this browser.", error);
@@ -1348,6 +1379,7 @@
 
       function startRound() {
         ensureAudioReady();
+        primeSpeech();
         state.phase = "playing";
         state.score = 0;
         state.elapsed = 0;
@@ -1506,8 +1538,14 @@
       }
 
       function wireEvents() {
-        $("startButton").addEventListener("pointerdown", ensureAudioReady, { passive: true });
-        $("startButton").addEventListener("touchstart", ensureAudioReady, { passive: true });
+        $("startButton").addEventListener("pointerdown", () => {
+          ensureAudioReady();
+          primeSpeech();
+        }, { passive: true });
+        $("startButton").addEventListener("touchstart", () => {
+          ensureAudioReady();
+          primeSpeech();
+        }, { passive: true });
         $("startButton").addEventListener("click", startRound);
         $("saveScoreButton").addEventListener("click", submitScore);
         $("eraseInitial").addEventListener("click", eraseInitial);
