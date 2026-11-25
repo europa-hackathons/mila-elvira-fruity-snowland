@@ -2,7 +2,7 @@
 
 **Fruity Snowland** (*"The Sweetest Snowball Arcade!"*) is a single-file, zero-dependency HTML5 Canvas arcade catching game built for and inspired by **Mila & Elvira** (authored in this repository by Dmitry - `Maxim's Dad`).
 
-Set in front of a moonlit, snowy castle, players pick one of six wizarding-themed winter buddies, customize their coat and hat color, and spend a two-minute round catching falling fruit, grabbing temporary Extended Arms power-ups, and dodging brown and yellow snowballs to climb a local Top 5 leaderboard.
+Set in front of a moonlit, snowy castle, players spend a two-minute round catching falling fruit, grabbing temporary Extended Arms power-ups, and dodging brown and yellow snowballs. Desktop browsers open in two-player competition mode; mobile devices open in the original single-player mode with character color customization and the local Top 5 leaderboard. Desktop users can switch modes from the main screen.
 
 ## Run it
 
@@ -20,10 +20,12 @@ Open [index.html](index.html) directly in any modern desktop or mobile web brows
 ## Controls
 
 ### Desktop
-- **`←` / `→` (`ArrowLeft` / `ArrowRight`)**: Move your character left and right.
+- **Two-player (default)**: Player 1 uses **`A` / `D`**; Player 2 uses **`←` / `→`**.
+- **Single-player mode**: Use **`←` / `→`** to move.
 - **`🔊` / `🔇` button** (top-right HUD): Toggle background music, sound effects, and spoken phrases.
 
-### Mobile (screen width `≤ 620px`)
+### Mobile
+- Single-player mode is always loaded and cannot be switched.
 - **`◀` / `▶` on-screen buttons**: Press and hold to move left or right.
 
 ### High-Score Entry (Game Over)
