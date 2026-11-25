@@ -32,6 +32,7 @@ Open [index.html](index.html) directly in any modern desktop or mobile web brows
 - **`A`–`Z` keys** or **on-screen letter pad**: Enter your 3-letter initials.
 - **`Backspace`** or **`⌫ DELETE`**: Remove the last letter.
 - **`Enter`** or **`SAVE MY SCORE! 🏆`**: Save your score to the Top 5 board.
+- **Two-player mode**: The on-screen letter pad enters Player 1's nickname first, then automatically advances to Player 2. Both scores are saved as independent Top 5 entries.
 
 ## How the game is organised
 

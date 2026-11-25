@@ -328,6 +328,7 @@
       gap: 4px;
       margin: 10px auto;
     }
+    .letter-grid[hidden] { display: none; }
     .letter-button, .erase-button {
       padding: 6px 2px;
       color: #31295d;
@@ -350,6 +351,39 @@
       background: #f3edff;
       font-size: 18px;
       font-weight: 900;
+    }
+    .two-player-nicknames {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 13px auto;
+      max-width: 430px;
+    }
+    .two-player-nicknames[hidden] { display: none; }
+    .nickname-field {
+      padding: 10px;
+      border: 2px solid #d83c78;
+      border-radius: 14px;
+      color: #7d2150;
+      background: #fff0f6;
+    }
+    .nickname-field:last-child {
+      border-color: #168db5;
+      color: #0f6483;
+      background: #ecfbff;
+    }
+    .nickname-field label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 1000; }
+    .nickname-field input {
+      width: 5.5em;
+      padding: 7px 9px;
+      border: 2px solid currentColor;
+      border-radius: 9px;
+      color: inherit;
+      background: white;
+      font: 1000 20px/1 "Trebuchet MS", sans-serif;
+      letter-spacing: .18em;
+      text-align: center;
+      text-transform: uppercase;
     }
     .notice { min-height: 18px; margin: 3px 0 !important; color: #d13d7f; font-size: 12px !important; font-weight: 900; }
 
@@ -394,6 +428,7 @@
       .avatar { width: 39px; height: 47px; }
       .character-button strong { font-size: 10px; }
       .character-button small { font-size: 8px; }
+      .two-player-nicknames { grid-template-columns: 1fr; max-width: 240px; }
       .mobile-controls {
         position: absolute;
         z-index: 2;
@@ -522,14 +557,25 @@
         <section class="screen-panel" id="gameOverPanel" aria-labelledby="gameOverTitle" hidden>
           <div class="card">
             <h2 id="gameOverTitle">SNOW MUCH FUN!</h2>
-            <p class="gameover-score">Your score: <span id="finalScore">0</span></p>
+            <p class="gameover-score" id="finalScoreLine">Your score: <span id="finalScore">0</span></p>
             <div class="two-player-result" id="twoPlayerResult" hidden></div>
+            <div class="two-player-nicknames" id="twoPlayerNicknames" hidden>
+              <div class="nickname-field">
+                <label for="playerOneInitials">PLAYER 1 NICKNAME</label>
+                <input id="playerOneInitials" type="text" maxlength="3" inputmode="text" autocomplete="off" aria-label="Player 1 three-letter nickname">
+              </div>
+              <div class="nickname-field">
+                <label for="playerTwoInitials">PLAYER 2 NICKNAME</label>
+                <input id="playerTwoInitials" type="text" maxlength="3" inputmode="text" autocomplete="off" aria-label="Player 2 three-letter nickname">
+              </div>
+            </div>
             <p id="initialPrompt">Enter your 3 initials for the high-score board!</p>
             <div class="initial-display" id="initialDisplay" aria-live="polite">___</div>
             <p class="notice" id="initialNotice" aria-live="polite"></p>
             <div class="letter-grid" id="letterGrid" aria-label="Choose three initials"></div>
             <button type="button" class="secondary-button" id="eraseInitial" aria-label="Delete last initial">⌫ DELETE</button>
             <button type="button" class="primary-button" id="saveScoreButton">SAVE MY SCORE! 🏆</button>
+            <button type="button" class="primary-button" id="saveTwoPlayerScoresButton" hidden>SAVE BOTH SCORES! 🏆</button>
             <div id="leaderboardWrap" hidden>
               <h3>❄️ TOP 5 SNOW STARS ❄️</h3>
               <table class="leaderboard">
@@ -538,7 +584,6 @@
               </table>
               <button type="button" class="primary-button" id="playAgainButton">PLAY AGAIN</button>
             </div>
-            <button type="button" class="primary-button" id="twoPlayerAgainButton" hidden>PLAY AGAIN</button>
           </div>
         </section>
 
@@ -629,6 +674,7 @@
           { score: 0, x: .68, combo: 0, lastCatchAt: -10, frozenUntil: 0, armUpgradeUntil: 0, held: { left: false, right: false } }
         ],
         initials: "",
+        activeNicknamePlayer: 0,
         scores: [],
         soundOn: true,
         audio: null,
@@ -1108,18 +1154,6 @@
         ctx.beginPath();
         ctx.arc(0, -65, 6, 0, Math.PI * 2);
         ctx.fill();
-        if (team) {
-          ctx.fillStyle = team.accent;
-          roundedRect(ctx, -15, -79, 30, 12, 6);
-          ctx.fill();
-          ctx.stroke();
-          ctx.fillStyle = team.coat;
-          ctx.font = "1000 8px 'Trebuchet MS', sans-serif";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText(team.label, 0, -73);
-          ctx.textBaseline = "alphabetic";
-        }
         ctx.fillStyle = "#30264f";
         ctx.beginPath();
         ctx.arc(-7, -32, 2, 0, Math.PI * 2);
@@ -1179,24 +1213,47 @@
           ctx.textBaseline = "middle";
           ctx.fillText(fruit.emoji, 0, 1);
         } else {
-          ctx.fillStyle = item.kind === "badSnow" ? "#8b5a3d" : "#f2cd3a";
-          ctx.strokeStyle = item.kind === "badSnow" ? "#61391f" : "#bd8d18";
+          const size = item.radius * 1.45;
+          const depth = size * .27;
+          ctx.shadowColor = "#b9f7ff";
+          ctx.shadowBlur = 8;
+          ctx.fillStyle = item.kind === "badSnow" ? "#9feafa" : "#c9f5ff";
+          ctx.strokeStyle = "#4babc8";
           ctx.lineWidth = 3;
           ctx.beginPath();
-          ctx.arc(0, 0, item.radius, 0, Math.PI * 2);
+          ctx.moveTo(-size / 2, -size / 2 + depth);
+          ctx.lineTo(size / 2 - depth, -size / 2);
+          ctx.lineTo(size / 2, size / 2 - depth);
+          ctx.lineTo(-size / 2 + depth, size / 2);
+          ctx.closePath();
           ctx.fill();
           ctx.stroke();
-          ctx.fillStyle = "#ffffff99";
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = "#eaffff";
           ctx.beginPath();
-          ctx.arc(-item.radius * .3, -item.radius * .3, item.radius * .27, 0, Math.PI * 2);
+          ctx.moveTo(-size / 2, -size / 2 + depth);
+          ctx.lineTo(-size / 2 + depth, -size / 2);
+          ctx.lineTo(size / 2, -size / 2);
+          ctx.lineTo(size / 2 - depth, -size / 2 + depth);
+          ctx.closePath();
           ctx.fill();
-          ctx.strokeStyle = "#fff4cc";
+          ctx.stroke();
+          ctx.fillStyle = item.kind === "badSnow" ? "#6bc9e2" : "#8edced";
+          ctx.beginPath();
+          ctx.moveTo(size / 2 - depth, -size / 2 + depth);
+          ctx.lineTo(size / 2, -size / 2);
+          ctx.lineTo(size / 2, size / 2 - depth);
+          ctx.lineTo(size / 2 - depth, size / 2);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.strokeStyle = "#ffffffcc";
           ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.moveTo(-item.radius * .65, -item.radius * .55);
-          ctx.lineTo(item.radius * .65, item.radius * .55);
-          ctx.moveTo(item.radius * .65, -item.radius * .55);
-          ctx.lineTo(-item.radius * .65, item.radius * .55);
+          ctx.moveTo(-size * .32, -size * .23);
+          ctx.lineTo(-size * .08, -size * .37);
+          ctx.moveTo(-size * .25, size * .14);
+          ctx.lineTo(size * .08, -size * .18);
           ctx.stroke();
         }
         ctx.restore();
@@ -1706,12 +1763,13 @@
         startMusic();
       }
 
-      function renderLeaderboard(highlightIndex) {
+      function renderLeaderboard(highlightIndexes = []) {
         const body = $("leaderboardBody");
+        const highlighted = new Set(Array.isArray(highlightIndexes) ? highlightIndexes : [highlightIndexes]);
         body.innerHTML = "";
         state.scores.forEach((entry, index) => {
           const row = document.createElement("tr");
-          if (index === highlightIndex) row.className = "score-row-current";
+          if (highlighted.has(index)) row.className = "score-row-current";
           row.innerHTML = `<td>${["🥇", "🥈", "🥉", "4", "5"][index]}</td><td>${entry.initials}</td><td>${entry.score}</td>`;
           body.appendChild(row);
         });
@@ -1737,18 +1795,25 @@
             ? "IT'S A TIE!"
             : playerOne.score > playerTwo.score ? "PLAYER 1 WINS!" : "PLAYER 2 WINS!";
           $("gameOverTitle").textContent = winner;
+          $("finalScoreLine").innerHTML = `Final scores: <span id="finalScore"></span>`;
           $("finalScore").textContent = `P1 ${playerOne.score} · P2 ${playerTwo.score}`;
+          $("initialNotice").textContent = "";
           $("initialDisplay").hidden = true;
-          $("initialPrompt").hidden = true;
-          $("letterGrid").hidden = true;
-          $("eraseInitial").hidden = true;
+          $("initialPrompt").hidden = false;
+          $("letterGrid").hidden = false;
+          $("eraseInitial").hidden = false;
           $("saveScoreButton").hidden = true;
+          $("saveTwoPlayerScoresButton").hidden = false;
+          $("twoPlayerNicknames").hidden = false;
           $("leaderboardWrap").hidden = true;
           $("twoPlayerResult").textContent =
             `${characters[state.selectedCharacters[0]].name}: ${playerOne.score} · ` +
             `${characters[state.selectedCharacters[1]].name}: ${playerTwo.score}`;
           $("twoPlayerResult").hidden = false;
-          $("twoPlayerAgainButton").hidden = false;
+          $("playerOneInitials").value = "";
+          $("playerTwoInitials").value = "";
+          state.activeNicknamePlayer = 0;
+          updateNicknamePrompt();
           gameOverPanel.hidden = false;
           mobileControls.hidden = true;
           $("luckyBadge").hidden = true;
@@ -1758,6 +1823,7 @@
           return;
         }
         $("gameOverTitle").textContent = "SNOW MUCH FUN!";
+        $("finalScoreLine").innerHTML = `Your score: <span id="finalScore"></span>`;
         $("finalScore").textContent = String(state.score);
         state.initials = "";
         $("initialDisplay").textContent = "___";
@@ -1767,9 +1833,10 @@
         $("letterGrid").hidden = false;
         $("eraseInitial").hidden = false;
         $("saveScoreButton").hidden = false;
+        $("saveTwoPlayerScoresButton").hidden = true;
+        $("twoPlayerNicknames").hidden = true;
         $("leaderboardWrap").hidden = true;
         $("twoPlayerResult").hidden = true;
-        $("twoPlayerAgainButton").hidden = true;
         gameOverPanel.hidden = false;
         mobileControls.hidden = true;
         $("luckyBadge").hidden = true;
@@ -1792,8 +1859,34 @@
         }
       }
 
+      function updateNicknamePrompt() {
+        if (state.mode !== "multi" || state.phase !== "over") return;
+        const inputs = [$("playerOneInitials"), $("playerTwoInitials")];
+        if (inputs.every((input) => input.value.length === 3)) {
+          $("initialPrompt").textContent = "Both nicknames are ready!";
+        } else {
+          $("initialPrompt").textContent =
+            `Player ${state.activeNicknamePlayer + 1}, enter your 3-letter nickname.`;
+        }
+      }
+
       function addInitial(letter) {
-        if (state.phase !== "over" || state.initials.length >= 3 || !/^[A-Z]$/.test(letter)) return;
+        if (state.phase !== "over" || !/^[A-Z]$/.test(letter)) return;
+        if (state.mode === "multi") {
+          const inputs = [$("playerOneInitials"), $("playerTwoInitials")];
+          const input = inputs[state.activeNicknamePlayer];
+          if (input.value.length >= 3) return;
+          input.value += letter;
+          $("initialNotice").textContent = "";
+          if (input.value.length === 3 && state.activeNicknamePlayer === 0) {
+            state.activeNicknamePlayer = 1;
+          }
+          updateNicknamePrompt();
+          inputs[state.activeNicknamePlayer].focus();
+          playTone(540, .045, "square", .035);
+          return;
+        }
+        if (state.initials.length >= 3) return;
         state.initials += letter;
         $("initialDisplay").textContent = state.initials.padEnd(3, "_").split("").join(" ");
         $("initialNotice").textContent = "";
@@ -1801,6 +1894,19 @@
       }
 
       function eraseInitial() {
+        if (state.mode === "multi") {
+          const inputs = [$("playerOneInitials"), $("playerTwoInitials")];
+          let input = inputs[state.activeNicknamePlayer];
+          if (!input.value && state.activeNicknamePlayer === 1) {
+            state.activeNicknamePlayer = 0;
+            input = inputs[0];
+          }
+          input.value = input.value.slice(0, -1);
+          $("initialNotice").textContent = "";
+          updateNicknamePrompt();
+          input.focus();
+          return;
+        }
         state.initials = state.initials.slice(0, -1);
         $("initialDisplay").textContent = state.initials.padEnd(3, "_").split("").join(" ");
         $("initialNotice").textContent = "";
@@ -1818,13 +1924,45 @@
         if (!saved) return;
         state.scores = nextScores;
         const rank = state.scores.findIndex((entry) => entry.initials === state.initials && entry.score === state.score);
-        renderLeaderboard(rank);
+        renderLeaderboard([rank]);
         $("initialPrompt").hidden = true;
         $("letterGrid").hidden = true;
         $("eraseInitial").hidden = true;
         $("saveScoreButton").hidden = true;
         $("leaderboardWrap").hidden = false;
         $("initialDisplay").textContent = state.initials;
+        playTone(880, .2, "triangle", .08);
+      }
+
+      function submitTwoPlayerScores() {
+        const nicknames = [
+          $("playerOneInitials").value.trim().toUpperCase(),
+          $("playerTwoInitials").value.trim().toUpperCase()
+        ];
+        if (nicknames.some((nickname) => !/^[A-Z]{3}$/.test(nickname))) {
+          $("initialNotice").textContent = "Both players must enter exactly 3 letters!";
+          playTone(180, .1, "square", .05);
+          return;
+        }
+        const entries = state.players.map((player, index) => ({
+          initials: nicknames[index],
+          score: player.score
+        }));
+        const nextScores = [...state.scores, ...entries]
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 5);
+        const saved = saveScores(nextScores);
+        if (!saved) return;
+        state.scores = nextScores;
+        const ranks = entries.map((entry) => state.scores.indexOf(entry)).filter((index) => index >= 0);
+        renderLeaderboard(ranks);
+        $("twoPlayerNicknames").hidden = true;
+        $("saveTwoPlayerScoresButton").hidden = true;
+        $("initialNotice").textContent = "";
+        $("initialPrompt").hidden = true;
+        $("letterGrid").hidden = true;
+        $("eraseInitial").hidden = true;
+        $("leaderboardWrap").hidden = false;
         playTone(880, .2, "triangle", .08);
       }
 
@@ -1874,8 +2012,23 @@
         $("saveScoreButton").addEventListener("click", submitScore);
         $("eraseInitial").addEventListener("click", eraseInitial);
         $("playAgainButton").addEventListener("click", resetToStart);
-        $("twoPlayerAgainButton").addEventListener("click", resetToStart);
+        $("saveTwoPlayerScoresButton").addEventListener("click", submitTwoPlayerScores);
         $("modeSwitch").addEventListener("click", switchMode);
+        [$("playerOneInitials"), $("playerTwoInitials")].forEach((input, playerIndex) => {
+          input.addEventListener("focus", () => {
+            state.activeNicknamePlayer = playerIndex;
+            updateNicknamePrompt();
+          });
+          input.addEventListener("input", () => {
+            input.value = input.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3);
+            $("initialNotice").textContent = "";
+            if (playerIndex === 0 && input.value.length === 3) {
+              state.activeNicknamePlayer = 1;
+              updateNicknamePrompt();
+              $("playerTwoInitials").focus();
+            }
+          });
+        });
         document.addEventListener("pointerdown", () => {
           ensureAudioReady();
         }, { passive: true });
@@ -1912,6 +2065,17 @@
           if (state.mode === "single" && state.phase === "over" && /^[a-z]$/i.test(event.key)) addInitial(event.key.toUpperCase());
           if (state.mode === "single" && state.phase === "over" && event.key === "Backspace") eraseInitial();
           if (state.mode === "single" && state.phase === "over" && event.key === "Enter" && !$("saveScoreButton").hidden) submitScore();
+          const editingNickname = event.target === $("playerOneInitials") || event.target === $("playerTwoInitials");
+          if (state.mode === "multi" && state.phase === "over" && !editingNickname && /^[a-z]$/i.test(event.key)) {
+            addInitial(event.key.toUpperCase());
+          }
+          if (state.mode === "multi" && state.phase === "over" && !editingNickname && event.key === "Backspace") {
+            eraseInitial();
+          }
+          if (state.mode === "multi" && state.phase === "over" && event.key === "Enter" &&
+              !$("saveTwoPlayerScoresButton").hidden) {
+            submitTwoPlayerScores();
+          }
         });
         window.addEventListener("keyup", (event) => {
           if (state.mode === "multi") {
