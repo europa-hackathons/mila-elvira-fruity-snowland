@@ -2,7 +2,7 @@
 
 **Fruity Snowland** (*"The Sweetest Snowball Arcade!"*) is a single-file, zero-dependency HTML5 Canvas arcade catching game built for and inspired by **Mila & Elvira** (authored in this repository by Dmitry - `Maxim's Dad`).
 
-Set in front of a moonlit, snowy castle, players spend a two-minute round catching falling fruit, grabbing temporary Extended Arms power-ups, and dodging brown and yellow snowballs. Desktop browsers open in two-player competition mode; mobile devices open in the original single-player mode with character color customization and the local Top 5 leaderboard. Desktop users can switch modes from the main screen.
+Set in front of a moonlit, snowy castle, players spend a two-minute round catching falling fruit, grabbing temporary Extended Arms power-ups, and dodging brown and yellow snowballs. Desktop browsers open in two-player competition mode; mobile devices open in the original single-player mode with character color customization and the local Top 5 leaderboard. Desktop users can switch modes from the main screen. Two-player teams have distinctive berry/gold star and blue/mint snowflake outfits.
 
 ## Run it
 
@@ -91,6 +91,6 @@ Each character has a **Lucky Fruit** worth `+10` bonus points and can wear any o
 
 ## Others
 
-- **Audio & Spoken Callouts**: Uses the browser's Web Audio API for music/SFX and the Web Speech API (`speechSynthesis`) for playful callouts (*"Happy, happy, happy"*, *"Extended arms"*, *"Emotional Damage"*). Both degrade gracefully if unsupported or muted.
+- **Audio & Spoken Callouts**: Uses the browser's Web Audio API for music/SFX and the Web Speech API (`speechSynthesis`) for playful callouts (*"Lucky!"*, *"Extended arms"*, *"Emotional Damage"*). Two-player callouts use distinct voices, with pitch/rate fallbacks when the browser only provides one English voice. Both degrade gracefully if unsupported or muted.
 - **Display & Accessibility**: Scales canvas rendering for HiDPI screens (capped at `2×` `devicePixelRatio`), includes ARIA labels and `aria-live` regions for status updates, and clears held movement keys if the browser window loses focus.
 - **Offline-Ready**: Uses native emoji and system fonts with zero external network requests.

@@ -216,6 +216,8 @@
       border-radius: 17px;
       background: #f7f2ff;
     }
+    .player-picker:first-child { border-color: #e33c7b; background: #fff0f6; }
+    .player-picker:last-child { border-color: #168db5; background: #ecfbff; }
     .player-picker h3 { margin: 0 0 7px; color: #5541b2; font-size: 14px; }
     .player-picker .character-grid { margin: 0; gap: 5px; }
     .player-picker .character-button { padding: 7px 2px; }
@@ -577,6 +579,10 @@
         { name: "Cherry red", value: "#ed5260" },
         { name: "Snow white", value: "#f5f4ff" }
       ];
+      const multiplayerOutfits = [
+        { coat: "#d72f68", hat: "#b91f52", scarf: "#ffd166", accent: "#fff1a8", badge: "star", label: "P1" },
+        { coat: "#168db5", hat: "#0f6f96", scarf: "#7cf0dd", accent: "#d8fff9", badge: "snowflake", label: "P2" }
+      ];
       const fruitTypes = {
         strawberry: { emoji: "🍓", points: 10, color: "#f34973" },
         orange: { emoji: "🍊", points: 10, color: "#ff9d38" },
@@ -677,7 +683,7 @@
         context.closePath();
       }
 
-      function avatarSvg(character, index) {
+      function avatarSvg(character, index, team = null) {
         const hairShape = character.girl
           ? `<path d="M12 27 Q9 5 26 5 Q44 6 41 28 L39 46 Q34 39 34 29 L19 29 Q18 39 13 44Z" fill="${character.hair}"/>`
           : `<path d="M12 23 Q11 5 27 5 Q42 6 40 23 L36 19 Q26 13 17 21Z" fill="${character.hair}"/>`;
@@ -688,10 +694,15 @@
             : "";
         const scar = character.scar ? `<path d="M30 14l-2 5 3 3-3 5" fill="none" stroke="#c34a4e" stroke-width="1.5"/>` : "";
         const freckles = character.freckles ? `<circle cx="18" cy="29" r="1" fill="#b46d4a"/><circle cx="22" cy="30" r="1" fill="#b46d4a"/><circle cx="32" cy="30" r="1" fill="#b46d4a"/><circle cx="36" cy="29" r="1" fill="#b46d4a"/>` : "";
+        const teamBadge = team
+          ? `<circle cx="27" cy="51" r="6" fill="${team.accent}" stroke="#34265c" stroke-width="1.2"/>
+             <text x="27" y="53.5" fill="${team.coat}" font-size="${team.badge === "star" ? 8 : 9}" font-weight="1000" text-anchor="middle">${team.badge === "star" ? "★" : "❄"}</text>`
+          : "";
         return `<svg class="avatar" viewBox="0 0 54 62" role="img" aria-label="${character.name}, ${character.role}">
           <ellipse cx="27" cy="58" rx="20" ry="3" fill="#aaa0d1"/>
           <path d="M14 43 Q27 36 40 43 L46 58 H8Z" fill="${character.coat}" stroke="#34265c" stroke-width="2"/>
           <path d="M19 42 L27 50 L35 42" fill="${character.scarf}" stroke="#34265c" stroke-width="1.5"/>
+          ${teamBadge}
           ${hairShape}
           <ellipse cx="27" cy="25" rx="13" ry="15" fill="#ffd7b5" stroke="#34265c" stroke-width="1.5"/>
           <circle cx="22" cy="25" r="1.5" fill="#34265c"/><circle cx="32" cy="25" r="1.5" fill="#34265c"/>
@@ -707,6 +718,10 @@
         const character = characters[index];
         const color = state.characterColors[index];
         return { ...character, coat: color, hat: color };
+      }
+
+      function multiplayerCharacter(index, playerIndex) {
+        return { ...characters[index], ...multiplayerOutfits[playerIndex] };
       }
 
       function renderColorChoices() {
@@ -760,12 +775,13 @@
       function renderPlayerChoices(playerIndex, grid, characterIndexes) {
         grid.innerHTML = "";
         characterIndexes.forEach((characterIndex) => {
-          const character = characters[characterIndex];
+          const character = multiplayerCharacter(characterIndex, playerIndex);
+          const team = multiplayerOutfits[playerIndex];
           const button = document.createElement("button");
           button.type = "button";
           button.className = `character-button${characterIndex === state.selectedCharacters[playerIndex] ? " selected" : ""}`;
           button.setAttribute("aria-pressed", String(characterIndex === state.selectedCharacters[playerIndex]));
-          button.innerHTML = `${avatarSvg(character, characterIndex)}<strong>${character.name}</strong><small>${character.role}</small>`;
+          button.innerHTML = `${avatarSvg(character, characterIndex, team)}<strong>${character.name}</strong><small>${team.label} · ${character.role}</small>`;
           button.addEventListener("click", () => {
             state.selectedCharacters[playerIndex] = characterIndex;
             renderCharacterChoices();
@@ -914,9 +930,18 @@
         ctx.fillRect(0, height - 35, width, 35);
       }
 
-      function drawPlayer(characterIndex = state.selectedCharacter, playerX = state.playerX, frozenUntil = state.frozenUntil, armUpgradeUntil = state.armUpgradeUntil) {
+      function drawPlayer(
+        characterIndex = state.selectedCharacter,
+        playerX = state.playerX,
+        frozenUntil = state.frozenUntil,
+        armUpgradeUntil = state.armUpgradeUntil,
+        playerIndex = null
+      ) {
         const { width, height } = dims();
-        const character = state.mode === "multi" ? characters[characterIndex] : characterWithColor(characterIndex);
+        const team = playerIndex === null ? null : multiplayerOutfits[playerIndex];
+        const character = state.mode === "multi"
+          ? multiplayerCharacter(characterIndex, playerIndex)
+          : characterWithColor(characterIndex);
         const x = playerX * width;
         const y = height - 85;
         ctx.save();
@@ -959,6 +984,26 @@
         ctx.strokeStyle = "#382555";
         ctx.lineWidth = 2.5;
         ctx.stroke();
+        if (team) {
+          ctx.fillStyle = team.accent;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(-20, -7);
+          ctx.lineTo(-29, 11);
+          ctx.lineTo(-22, 15);
+          ctx.lineTo(-14, -10);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(20, -7);
+          ctx.lineTo(29, 11);
+          ctx.lineTo(22, 15);
+          ctx.lineTo(14, -10);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
         ctx.fillStyle = character.scarf;
         ctx.beginPath();
         ctx.moveTo(-10, -13); ctx.quadraticCurveTo(0, -5, 10, -13);
@@ -966,6 +1011,18 @@
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
+        if (team) {
+          ctx.fillStyle = team.accent;
+          ctx.beginPath();
+          ctx.arc(0, 26, 9, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = team.coat;
+          ctx.font = "1000 12px 'Trebuchet MS', sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(team.badge === "star" ? "★" : "❄", 0, 27);
+        }
 
         if (character.hairStyle === "bushy") {
           ctx.fillStyle = character.hair;
@@ -1051,6 +1108,18 @@
         ctx.beginPath();
         ctx.arc(0, -65, 6, 0, Math.PI * 2);
         ctx.fill();
+        if (team) {
+          ctx.fillStyle = team.accent;
+          roundedRect(ctx, -15, -79, 30, 12, 6);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = team.coat;
+          ctx.font = "1000 8px 'Trebuchet MS', sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(team.label, 0, -73);
+          ctx.textBaseline = "alphabetic";
+        }
         ctx.fillStyle = "#30264f";
         ctx.beginPath();
         ctx.arc(-7, -32, 2, 0, Math.PI * 2);
@@ -1211,7 +1280,7 @@
         if (state.phase === "playing" || state.phase === "over") {
           if (state.mode === "multi") {
             state.players.forEach((player, index) => drawPlayer(
-              state.selectedCharacters[index], player.x, player.frozenUntil, player.armUpgradeUntil
+              state.selectedCharacters[index], player.x, player.frozenUntil, player.armUpgradeUntil, index
             ));
           } else {
             drawPlayer();
@@ -1318,18 +1387,26 @@
         window.setTimeout(() => playTone(880, .1, "sine", .06), 65);
       }
 
-      function speakPhrase(phrase) {
+      function speakPhrase(phrase, playerIndex = null) {
         if (!state.soundOn || !("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") return;
         try {
           if (state.speechTimer !== null) window.clearTimeout(state.speechTimer);
           window.speechSynthesis.cancel();
           const utterance = new SpeechSynthesisUtterance(phrase);
           utterance.lang = "en-US";
-          utterance.rate = 1.05;
-          utterance.pitch = 1.2;
+          utterance.rate = playerIndex === 1 ? .92 : 1.05;
+          utterance.pitch = playerIndex === 0 ? 1.2 : playerIndex === 1 ? .75 : 1.2;
           utterance.volume = 1;
-          const voices = window.speechSynthesis.getVoices();
-          const preferredVoice = voices.find((voice) => voice.lang.toLowerCase().startsWith("en")) || voices[0];
+          const voices = window.speechSynthesis.getVoices()
+            .filter((voice) => voice.lang.toLowerCase().startsWith("en"));
+          const uniqueVoices = voices.filter((voice, index) =>
+            voices.findIndex((candidate) => candidate.name === voice.name) === index
+          );
+          const preferredVoice = playerIndex === null
+            ? uniqueVoices[0]
+            : uniqueVoices.length
+              ? uniqueVoices[playerIndex % uniqueVoices.length]
+              : undefined;
           if (preferredVoice) utterance.voice = preferredVoice;
           state.speechUtterance = utterance;
           utterance.onend = () => {
@@ -1360,8 +1437,8 @@
         }
       }
 
-      function playPhraseTune(phrase, notes, wave) {
-        speakPhrase(phrase);
+      function playPhraseTune(phrase, notes, wave, playerIndex = null) {
+        speakPhrase(phrase, playerIndex);
         notes.forEach((note, index) => {
           window.setTimeout(() => playTone(note, .16, wave || "triangle", .065), index * 145);
         });
@@ -1435,7 +1512,7 @@
           else state.armUpgradeUntil = state.elapsed + 10;
           burst(item.x, item.y, "#e7a9ff", 18);
           popup("EXTENDED ARMS!", item.x, item.y - 20, "#ffe66d");
-          playPhraseTune("Extended arms", [523, 659, 784], "triangle");
+          playPhraseTune("Extended arms", [523, 659, 784], "triangle", playerIndex);
         } else if (item.kind === "fruit") {
           if (multi) {
             if (state.elapsed - player.lastCatchAt < 2.2) player.combo++;
@@ -1459,7 +1536,7 @@
           if (multi) setPlayerScore(playerIndex, player.score + points);
           else setScore(state.score + points);
           burst(item.x, item.y, fruitTypes[item.fruit].color, 13);
-          if (lucky) playPhraseTune("Happy, happy, happy", [659, 784, 988, 784, 1047]);
+          if (lucky) playPhraseTune("Lucky!", [659, 784, 988, 784, 1047], "triangle", playerIndex);
           else soundCatch();
         } else {
           if (multi) {
@@ -1474,7 +1551,7 @@
           state.shake = 9;
           burst(item.x, item.y, item.kind === "badSnow" ? "#a16643" : "#f1d24e", 12);
           popup("FROZEN!", item.x, item.y - 15, "#a9f6ff");
-          playPhraseTune("Emotional Damage", [440, 349, 294, 220], "sawtooth");
+          playPhraseTune("Emotional Damage", [440, 349, 294, 220], "sawtooth", playerIndex);
         }
       }
 
