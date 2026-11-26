@@ -730,6 +730,7 @@
         scores: [],
         soundOn: true,
         audio: null,
+        musicBus: null,
         speechUtterance: null,
         speechTimer: null,
         musicTimer: null,
@@ -1861,6 +1862,32 @@
           const AudioContextClass = window.AudioContext || window.webkitAudioContext;
           if (!AudioContextClass) return null;
           if (!state.audio) state.audio = new AudioContextClass();
+          if (!state.musicBus) {
+            const reverb = state.audio.createConvolver();
+            const wetGain = state.audio.createGain();
+            const dryGain = state.audio.createGain();
+            const impulse = state.audio.createBuffer(
+              2,
+              Math.floor(state.audio.sampleRate * 1.1),
+              state.audio.sampleRate
+            );
+            for (let channel = 0; channel < impulse.numberOfChannels; channel++) {
+              const data = impulse.getChannelData(channel);
+              for (let index = 0; index < data.length; index++) {
+                data[index] = (Math.random() * 2 - 1) * Math.pow(1 - index / data.length, 3);
+              }
+            }
+            reverb.buffer = impulse;
+            dryGain.gain.value = .78;
+            wetGain.gain.value = .16;
+            state.musicBus = state.audio.createGain();
+            state.musicBus.gain.value = .72;
+            state.musicBus.connect(dryGain);
+            state.musicBus.connect(reverb);
+            dryGain.connect(state.audio.destination);
+            reverb.connect(wetGain);
+            wetGain.connect(state.audio.destination);
+          }
           if (state.audio.state === "suspended") {
             await state.audio.resume();
           }
@@ -1902,6 +1929,49 @@
             console.warn("Audio is unavailable in this browser.", error);
           }
         });
+      }
+
+      function playMusicTone(frequency, duration, voice, volume) {
+        if (!state.soundOn) return;
+        ensureAudioReady().then((audio) => {
+          if (!audio || !state.musicBus) return;
+          try {
+            const now = audio.currentTime;
+            const gain = audio.createGain();
+            const filter = audio.createBiquadFilter();
+            filter.type = "lowpass";
+            filter.frequency.value = voice === "bell" ? 5600 : voice === "pad" ? 1200 : 3200;
+            gain.gain.setValueAtTime(.0001, now);
+            gain.gain.exponentialRampToValueAtTime(volume, now + (voice === "pad" ? .08 : .012));
+            gain.gain.exponentialRampToValueAtTime(.0001, now + duration);
+            filter.connect(gain);
+            gain.connect(state.musicBus);
+
+            const layers = voice === "bell"
+              ? [{ type: "sine", ratio: 1, level: 1 }, { type: "sine", ratio: 2.01, level: .18 }]
+              : voice === "pad"
+                ? [{ type: "sine", ratio: 1, level: .7 }, { type: "triangle", ratio: 1.5, level: .22 }]
+                : [{ type: "triangle", ratio: 1, level: 1 }];
+
+            layers.forEach((layer) => {
+              const oscillator = audio.createOscillator();
+              const layerGain = audio.createGain();
+              oscillator.type = layer.type;
+              oscillator.frequency.value = frequency * layer.ratio;
+              layerGain.gain.value = layer.level;
+              oscillator.connect(layerGain);
+              layerGain.connect(filter);
+              oscillator.start(now);
+              oscillator.stop(now + duration + .02);
+            });
+          } catch (error) {
+            console.warn("Audio is unavailable in this browser.", error);
+          }
+        });
+      }
+
+      function playSnowChime(accent = false) {
+        playMusicTone(accent ? 1567.98 : 1174.66, .32, "bell", accent ? .018 : .012);
       }
 
       function soundCatch() {
@@ -1971,22 +2041,59 @@
           state.musicTimer = null;
           return;
         }
-        const melody = [523, 659, 784, 659, 587, 740, 880, 740, 698, 880, 1047, 880, 784, 659, 587, 659];
-        const note = melody[state.musicStep % melody.length];
-        playTone(note, .19, "triangle", .025);
-        if (state.musicStep % 4 === 0) playTone(note / 2, .28, "sine", .018);
+        const chords = [
+          [261.63, 329.63, 392],
+          [220, 293.66, 349.23],
+          [174.61, 261.63, 349.23],
+          [196, 293.66, 392]
+        ];
+        const melody = [
+          [659, null, 784, 880, null, 784, 659, 587, 523, null, 587, 659, null, 784, 659, null],
+          [698, null, 880, 784, 698, null, 659, 587, 523, 587, 659, null, 784, 880, 784, null],
+          [784, 880, 988, null, 880, 784, 659, null, 698, 784, 880, 988, null, 1047, 988, 880],
+          [784, null, 659, 587, 523, null, 587, 659, 698, null, 659, 587, 523, 494, 523, null]
+        ];
+        const step = state.musicStep % 16;
+        const bar = Math.floor(state.musicStep / 16);
+        const phrase = Math.floor(bar / 2) % 4;
+        const chord = chords[bar % chords.length];
+        const note = melody[phrase][step];
+        const finale = state.speedStage >= 3;
+
+        if (note) {
+          playMusicTone(note, step % 4 === 0 ? .42 : .31, "bell", finale ? .048 : .041);
+        }
+
+        if (step === 0) {
+          chord.forEach((frequency) => playMusicTone(frequency, 1.45, "pad", .012));
+          playMusicTone(chord[0] / 2, .56, "pluck", .026);
+        } else if (step === 8) {
+          playMusicTone(chord[0] / 2, .5, "pluck", .022);
+        } else if ([4, 12].includes(step)) {
+          playMusicTone(chord[2] / 2, .34, "pluck", .017);
+        }
+
+        if (step === 15 && bar % 2 === 1) playSnowChime(phrase === 2);
+        if (finale && [3, 11].includes(step)) playMusicTone(chord[1] * 2, .2, "bell", .01);
         state.musicStep++;
-        state.musicTimer = window.setTimeout(playMusicStep, 235);
+        const musicTempos = [170, 155, 140, 125];
+        state.musicTimer = window.setTimeout(playMusicStep, musicTempos[state.speedStage]);
       }
 
       function stopMusic() {
         if (state.musicTimer !== null) window.clearTimeout(state.musicTimer);
         state.musicTimer = null;
+        if (state.audio && state.musicBus) {
+          state.musicBus.gain.setTargetAtTime(0, state.audio.currentTime, .03);
+        }
       }
 
       function startMusic() {
         stopMusic();
         if (!state.soundOn || state.phase !== "playing") return;
+        if (state.audio && state.musicBus) {
+          state.musicBus.gain.setTargetAtTime(.72, state.audio.currentTime, .03);
+        }
         state.musicStep = 0;
         playMusicStep();
       }
