@@ -39,6 +39,7 @@
       -webkit-tap-highlight-color: transparent;
     }
     .game-shell { width: min(100%, 1060px); }
+    .game-shell.camera-selected { width: min(100%, 1380px); }
     .brand {
       display: flex;
       align-items: center;
@@ -80,6 +81,22 @@
     }
     .cabinet::before { top: -60px; left: -40px; }
     .cabinet::after { right: -40px; bottom: -70px; }
+    .cabinet.camera-selected {
+      display: grid;
+      grid-template-columns: minmax(240px, 330px) minmax(0, 1fr);
+      grid-template-rows: auto auto;
+      gap: 0 13px;
+    }
+    .cabinet.camera-selected .screen { grid-column: 2; grid-row: 1; }
+    .cabinet.camera-selected .cabinet-footer { grid-column: 2; grid-row: 2; }
+    .cabinet.camera-selected .camera-dock {
+      grid-column: 1;
+      grid-row: 1 / span 2;
+      align-self: start;
+      grid-template-columns: 1fr;
+      margin-top: 0;
+    }
+    .cabinet.camera-selected .camera-preview { width: 100%; }
     .screen {
       position: relative;
       min-height: 585px;
@@ -538,6 +555,20 @@
         -webkit-tap-highlight-color: transparent;
       }
     }
+    @media (max-width: 900px) {
+      .cabinet.camera-selected {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+        gap: 10px 0;
+      }
+      .cabinet.camera-selected .camera-dock { grid-column: 1; grid-row: 1; }
+      .cabinet.camera-selected .screen { grid-column: 1; grid-row: 2; }
+      .cabinet.camera-selected .cabinet-footer { grid-column: 1; grid-row: 3; }
+      .cabinet.camera-selected .camera-dock { grid-template-columns: minmax(180px, 240px) 1fr; }
+    }
+    @media (max-width: 620px) {
+      .cabinet.camera-selected .camera-dock { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
@@ -817,6 +848,7 @@
           this.status = "loading";
           this.errorMessage = "";
           this.syncControls();
+          this.setLayout(true);
           $("cameraPreview").hidden = false;
           $("enableCameraButton").hidden = true;
           $("cameraActions").hidden = false;
@@ -884,10 +916,17 @@
           this.controlState.player2 = { detected: false, tiltDegrees: 0, normalizedTilt: 0, direction: 0 };
           this.syncControls();
           this.overlay.getContext("2d").clearRect(0, 0, this.overlay.width, this.overlay.height);
+          this.setLayout(false);
           $("cameraPreview").hidden = true;
           $("enableCameraButton").hidden = false;
           $("cameraActions").hidden = true;
           this.updateStatus("Camera is off. Keyboard controls remain available.");
+        }
+
+        setLayout(selected) {
+          document.querySelector(".game-shell").classList.toggle("camera-selected", selected);
+          document.querySelector(".cabinet").classList.toggle("camera-selected", selected);
+          window.requestAnimationFrame(resizeCanvas);
         }
 
         fail(message) {
