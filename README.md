@@ -1,6 +1,6 @@
 # Fruity Snowland
 
-**Fruity Snowland** (*"The Sweetest Snowball Arcade!"*) is a single-file, zero-dependency HTML5 Canvas arcade catching game built for and inspired by **Mila & Elvira** (authored in this repository by Dmitry - `Maxim's Dad`).
+**Fruity Snowland** (*"The Sweetest Snowball Arcade!"*) is a single-file HTML5 Canvas arcade catching game with zero installation dependencies, built for and inspired by **Mila & Elvira** (authored in this repository by Dmitry - `Maxim's Dad`).
 
 Set in front of a moonlit, snowy castle, players spend a two-minute round catching falling fruit, grabbing temporary Extended Arms power-ups, and dodging brown and yellow snowballs. Desktop browsers open in two-player competition mode; mobile devices open in the original single-player mode with character color customization and the local Top 5 leaderboard. Desktop users can switch modes from the main screen. Two-player teams have distinctive berry/gold star and blue/mint snowflake outfits.
 
@@ -21,6 +21,7 @@ Open [index.html](index.html) directly in any modern desktop or mobile web brows
 
 ### Desktop
 - **Two-player (default)**: Player 1 uses **`A` / `D`**; Player 2 uses **`←` / `→`**.
+- Optional **head-tilt webcam controls** are available only in two-player mode. The left player in the mirrored preview controls Player 1 and the right player controls Player 2. Enable the webcam, hold still during calibration, then tilt left or right. Recalibrate or swap assignments at any time.
 - **Single-player mode**: Use **`←` / `→`** to move.
 - **`🔊` / `🔇` button** (top-right HUD): Toggle background music, sound effects, and spoken phrases.
 
@@ -94,4 +95,4 @@ Each character has a **Lucky Fruit** worth `+10` bonus points and can wear any o
 
 - **Audio & Spoken Callouts**: Uses the browser's Web Audio API for music/SFX and the Web Speech API (`speechSynthesis`) for playful callouts (*"Lucky!"*, *"Extended arms"*, *"Emotional Damage"*). Two-player callouts use distinct voices, with pitch/rate fallbacks when the browser only provides one English voice. Both degrade gracefully if unsupported or muted.
 - **Display & Accessibility**: Scales canvas rendering for HiDPI screens (capped at `2×` `devicePixelRatio`), includes ARIA labels and `aria-live` regions for status updates, and clears held movement keys if the browser window loses focus.
-- **Offline-Ready**: Uses native emoji and system fonts with zero external network requests.
+- **Privacy**: Webcam frames are processed locally in the browser and are never uploaded or recorded. Head-tilt tracking loads MediaPipe and its face model on demand, so that optional feature requires an internet connection; the keyboard and core game remain network-independent.

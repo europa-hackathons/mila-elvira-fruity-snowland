@@ -235,6 +235,41 @@
       cursor: pointer;
     }
     .mode-switch[hidden] { display: none; }
+    .camera-dock {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: minmax(180px, 240px) 1fr;
+      gap: 10px;
+      align-items: center;
+      margin-top: 13px;
+      padding: 10px;
+      border: 3px solid #9ef4f7;
+      border-radius: 17px;
+      background: #17194fd9;
+      box-shadow: 0 4px 0 #17123c;
+    }
+    .camera-dock[hidden], .camera-preview[hidden], .camera-actions[hidden] { display: none; }
+    .camera-preview { position: relative; overflow: hidden; aspect-ratio: 16 / 10; border: 2px solid white; border-radius: 12px; background: #0d1238; }
+    .camera-preview video, .camera-preview canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .camera-preview video { object-fit: fill; transform: scaleX(-1); }
+    .camera-preview canvas { pointer-events: none; }
+    .camera-copy { min-width: 0; }
+    .camera-copy strong { display: block; color: #fff5d5; font-size: 14px; }
+    .camera-status { margin: 3px 0 8px; color: #c9fbff; font-size: 11px; line-height: 1.35; }
+    .camera-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+    .camera-actions button, .camera-enable {
+      padding: 7px 10px;
+      border: 2px solid white;
+      border-radius: 10px;
+      color: white;
+      background: #6253c5;
+      box-shadow: 0 3px 0 #392c85;
+      font-size: 11px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .camera-enable { background: linear-gradient(#ff63ad, #ed3697); }
     .character-color-picker {
       margin: 8px auto 12px;
       padding: 10px;
@@ -422,6 +457,7 @@
       .screen-panel { padding: 10px; }
       .card { padding: 15px 12px; border-width: 3px; border-radius: 20px; }
       .card p { font-size: 13px; }
+      .camera-dock { grid-template-columns: 1fr; }
       .character-grid { gap: 4px; }
       .two-player-pickers { grid-template-columns: 1fr; gap: 8px; }
       .character-button { padding: 6px 1px; border-width: 2px; border-radius: 11px; }
@@ -598,6 +634,22 @@
         <span>★ FRUITS = POINTS · SNOWBALLS = OOPS! ★</span>
         <span id="footerControls">ARROW KEYS TO MOVE</span>
       </div>
+      <div class="camera-dock" id="cameraDock" hidden>
+        <div class="camera-preview" id="cameraPreview" hidden>
+          <video id="cameraVideo" muted playsinline autoplay></video>
+          <canvas id="cameraOverlay"></canvas>
+        </div>
+        <div class="camera-copy">
+          <strong>TWO-PLAYER HEAD-TILT CONTROLS</strong>
+          <p class="camera-status" id="cameraStatus" aria-live="polite">Camera is off. Keyboard controls remain available.</p>
+          <button type="button" class="camera-enable" id="enableCameraButton">ENABLE WEBCAM</button>
+          <div class="camera-actions" id="cameraActions" hidden>
+            <button type="button" id="calibrateCameraButton">RECALIBRATE</button>
+            <button type="button" id="swapPlayersButton">SWAP PLAYERS</button>
+            <button type="button" id="disableCameraButton">TURN OFF</button>
+          </div>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -670,8 +722,8 @@
         playerX: 0.5,
         held: { left: false, right: false },
         players: [
-          { score: 0, x: .32, combo: 0, lastCatchAt: -10, frozenUntil: 0, armUpgradeUntil: 0, held: { left: false, right: false } },
-          { score: 0, x: .68, combo: 0, lastCatchAt: -10, frozenUntil: 0, armUpgradeUntil: 0, held: { left: false, right: false } }
+          { score: 0, x: .32, combo: 0, lastCatchAt: -10, frozenUntil: 0, armUpgradeUntil: 0, held: { left: false, right: false }, cameraAxis: 0 },
+          { score: 0, x: .68, combo: 0, lastCatchAt: -10, frozenUntil: 0, armUpgradeUntil: 0, held: { left: false, right: false }, cameraAxis: 0 }
         ],
         initials: "",
         activeNicknamePlayer: 0,
@@ -690,6 +742,417 @@
         shake: 0,
         audioUnlocked: false,
         lastTimeLabel: ROUND_SECONDS
+      };
+
+      class HeadTiltCameraController {
+        constructor() {
+          this.video = $("cameraVideo");
+          this.overlay = $("cameraOverlay");
+          this.context = this.overlay.getContext("2d");
+          this.landmarker = null;
+          this.stream = null;
+          this.tracks = [null, null];
+          this.status = "off";
+          this.errorMessage = "";
+          this.frameHandle = null;
+          this.generation = 0;
+          this.lastVideoTime = -1;
+          this.calibration = null;
+          this.graceMs = 900;
+          this.maxMatchDistance = .3;
+          this.controlState = {
+            status: "off",
+            player1: { detected: false, tiltDegrees: 0, normalizedTilt: 0, direction: 0 },
+            player2: { detected: false, tiltDegrees: 0, normalizedTilt: 0, direction: 0 }
+          };
+        }
+
+        isSupported() {
+          return Boolean(navigator.mediaDevices?.getUserMedia);
+        }
+
+        updateStatus(message) {
+          $("cameraStatus").textContent = message;
+        }
+
+        syncControls() {
+          this.controlState.status = this.status;
+          this.controlState.errorMessage = this.errorMessage || undefined;
+          this.controlState.player1.normalizedTilt =
+            this.controlState.player1.detected ? this.controlState.player1.normalizedTilt : 0;
+          this.controlState.player2.normalizedTilt =
+            this.controlState.player2.detected ? this.controlState.player2.normalizedTilt : 0;
+          state.players[0].cameraAxis = this.controlState.player1.normalizedTilt;
+          state.players[1].cameraAxis = this.controlState.player2.normalizedTilt;
+        }
+
+        async createLandmarker(delegate) {
+          const visionModule = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3");
+          const vision = await visionModule.FilesetResolver.forVisionTasks(
+            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3/wasm"
+          );
+          return visionModule.FaceLandmarker.createFromOptions(vision, {
+            baseOptions: {
+              modelAssetPath:
+                "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+              delegate
+            },
+            runningMode: "VIDEO",
+            numFaces: 2,
+            minFaceDetectionConfidence: .5,
+            minFacePresenceConfidence: .5,
+            minTrackingConfidence: .5
+          });
+        }
+
+        async start() {
+          if (state.mode !== "multi") return;
+          if (!this.isSupported()) {
+            this.fail("Webcam controls are unavailable in this browser.");
+            return;
+          }
+          if (this.status === "loading" || this.status === "ready") return;
+          const generation = ++this.generation;
+          this.status = "loading";
+          this.errorMessage = "";
+          this.syncControls();
+          $("cameraPreview").hidden = false;
+          $("enableCameraButton").hidden = true;
+          $("cameraActions").hidden = false;
+          this.updateStatus("Requesting camera access and loading face tracking…");
+          try {
+            this.stream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 400 } },
+              audio: false
+            });
+            if (generation !== this.generation) {
+              this.stream.getTracks().forEach((track) => track.stop());
+              this.stream = null;
+              return;
+            }
+            this.video.srcObject = this.stream;
+            await this.video.play();
+            if (generation !== this.generation) return;
+            try {
+              this.landmarker = await this.createLandmarker("GPU");
+            } catch (gpuError) {
+              if (generation !== this.generation) return;
+              console.warn("GPU face tracking unavailable; trying CPU.", gpuError);
+              this.landmarker = await this.createLandmarker("CPU");
+            }
+            if (generation !== this.generation) {
+              this.landmarker?.close?.();
+              this.landmarker = null;
+              return;
+            }
+            this.status = "ready";
+            this.syncControls();
+            this.recalibrate();
+            this.scheduleFrame();
+          } catch (error) {
+            if (generation !== this.generation) return;
+            console.error("Could not start webcam head tracking.", error);
+            this.fail(
+              error?.name === "NotAllowedError"
+                ? "Camera permission was denied. Keyboard controls are still active."
+                : "Camera tracking could not start. Keyboard controls are still active."
+            );
+          }
+        }
+
+        stop() {
+          this.generation++;
+          if (this.frameHandle !== null) {
+            if (this.video.cancelVideoFrameCallback && this.frameHandle.type === "video") {
+              this.video.cancelVideoFrameCallback(this.frameHandle.id);
+            } else {
+              window.clearTimeout(this.frameHandle.id);
+            }
+          }
+          this.frameHandle = null;
+          this.stream?.getTracks().forEach((track) => track.stop());
+          this.stream = null;
+          this.video.srcObject = null;
+          this.landmarker?.close?.();
+          this.landmarker = null;
+          this.tracks = [null, null];
+          this.calibration = null;
+          this.status = "off";
+          this.errorMessage = "";
+          this.controlState.player1 = { detected: false, tiltDegrees: 0, normalizedTilt: 0, direction: 0 };
+          this.controlState.player2 = { detected: false, tiltDegrees: 0, normalizedTilt: 0, direction: 0 };
+          this.syncControls();
+          this.overlay.getContext("2d").clearRect(0, 0, this.overlay.width, this.overlay.height);
+          $("cameraPreview").hidden = true;
+          $("enableCameraButton").hidden = false;
+          $("cameraActions").hidden = true;
+          this.updateStatus("Camera is off. Keyboard controls remain available.");
+        }
+
+        fail(message) {
+          this.stop();
+          this.status = "error";
+          this.errorMessage = message;
+          this.syncControls();
+          this.updateStatus(message);
+        }
+
+        scheduleFrame() {
+          if (this.status !== "ready" || state.mode !== "multi") return;
+          if (this.video.requestVideoFrameCallback) {
+            const requestId = this.video.requestVideoFrameCallback(() => {
+              this.frameHandle = null;
+              this.processFrame();
+            });
+            this.frameHandle = { type: "video", id: requestId };
+          } else {
+            const timeoutId = window.setTimeout(() => {
+              this.frameHandle = null;
+              this.processFrame();
+            }, 33);
+            this.frameHandle = { type: "timeout", id: timeoutId };
+          }
+        }
+
+        detectionsFromResult(result, now) {
+          return (result.faceLandmarks || []).slice(0, 2).map((landmarks) => {
+            const left = landmarks[33];
+            const right = landmarks[263];
+            const mirroredLeft = { x: 1 - left.x, y: left.y };
+            const mirroredRight = { x: 1 - right.x, y: right.y };
+            const eyePoints = [mirroredLeft, mirroredRight].sort((a, b) => a.x - b.x);
+            const angle = Math.atan2(
+              eyePoints[1].y - eyePoints[0].y,
+              eyePoints[1].x - eyePoints[0].x
+            ) * 180 / Math.PI;
+            return {
+              landmarks,
+              center: { x: 1 - ((left.x + right.x) / 2), y: (left.y + right.y) / 2 },
+              angle,
+              now
+            };
+          });
+        }
+
+        distance(a, b) {
+          const dx = a.x - b.x;
+          const dy = (a.y - b.y) * 1.25;
+          return Math.hypot(dx, dy);
+        }
+
+        matchDetections(detections, now) {
+          const assignments = [null, null];
+          const used = new Set();
+          const activeSlots = [0, 1].filter((index) => this.tracks[index]);
+          const candidates = [];
+          for (const slot of activeSlots) {
+            candidates.push(detections.map((detection, detectionIndex) => ({
+              slot,
+              detectionIndex,
+              distance: this.distance(this.tracks[slot].center, detection.center)
+            })).sort((a, b) => a.distance - b.distance));
+          }
+          candidates.flat().sort((a, b) => a.distance - b.distance).forEach((candidate) => {
+            if (assignments[candidate.slot] === null &&
+                !used.has(candidate.detectionIndex) &&
+                candidate.distance <= this.maxMatchDistance) {
+              assignments[candidate.slot] = candidate.detectionIndex;
+              used.add(candidate.detectionIndex);
+            }
+          });
+
+          const available = detections.map((_, index) => index)
+            .filter((index) => !used.has(index))
+            .sort((a, b) => detections[a].center.x - detections[b].center.x);
+          [0, 1].forEach((slot) => {
+            if (!this.tracks[slot] && available.length) {
+              assignments[slot] = available.shift();
+            }
+          });
+
+          this.tracks.forEach((track, slot) => {
+            const detectionIndex = assignments[slot];
+            if (detectionIndex !== null) {
+              const detection = detections[detectionIndex];
+              if (!track) {
+                track = this.createTrack(detection);
+                this.tracks[slot] = track;
+              }
+              track.center = detection.center;
+              track.lastSeen = now;
+              track.lastDetection = detection;
+              this.updateTrack(track, detection, slot, now);
+            } else if (track) {
+              this.setControl(slot, false, 0, 0);
+              if (now - track.lastSeen > this.graceMs) this.tracks[slot] = null;
+            } else {
+              this.setControl(slot, false, 0, 0);
+            }
+          });
+        }
+
+        createTrack(detection) {
+          return {
+            center: detection.center,
+            lastSeen: detection.now,
+            lastDetection: detection,
+            filteredAngle: detection.angle,
+            neutralAngle: detection.angle,
+            stableDirection: 0,
+            candidateDirection: 0,
+            candidateFrames: 0
+          };
+        }
+
+        updateTrack(track, detection, slot, now) {
+          track.filteredAngle += .28 * (detection.angle - track.filteredAngle);
+          if (this.calibration) {
+            this.calibration.samples[slot].push(track.filteredAngle);
+            this.setControl(slot, true, 0, 0);
+            if (now - this.calibration.startedAt >= this.calibration.durationMs) {
+              this.finishCalibration();
+            }
+            return;
+          }
+          const tiltDegrees = track.filteredAngle - track.neutralAngle;
+          const normalizedTilt = this.mapTilt(tiltDegrees);
+          const enterCandidate = Math.abs(tiltDegrees) >= 4 ? Math.sign(tiltDegrees) : 0;
+          const leaveThresholdMet = Math.abs(tiltDegrees) <= 2.8;
+          let candidate = track.stableDirection;
+          if (enterCandidate) candidate = enterCandidate;
+          else if (leaveThresholdMet) candidate = 0;
+          if (candidate === track.candidateDirection) track.candidateFrames++;
+          else {
+            track.candidateDirection = candidate;
+            track.candidateFrames = 1;
+          }
+          if (track.candidateFrames >= 2) track.stableDirection = candidate;
+          const controlledTilt = track.stableDirection === 0 ? 0 : normalizedTilt;
+          this.setControl(slot, true, tiltDegrees, controlledTilt, track.stableDirection);
+        }
+
+        mapTilt(degrees) {
+          const absolute = Math.abs(degrees);
+          if (absolute <= 4) return 0;
+          return Math.sign(degrees) * Math.min(1, (absolute - 4) / 14);
+        }
+
+        setControl(slot, detected, tiltDegrees, normalizedTilt, direction = 0) {
+          const key = slot === 0 ? "player1" : "player2";
+          this.controlState[key] = {
+            detected,
+            tiltDegrees,
+            normalizedTilt,
+            direction: direction || Math.sign(normalizedTilt)
+          };
+          state.players[slot].cameraAxis = normalizedTilt;
+        }
+
+        recalibrate() {
+          if (this.status !== "ready") return;
+          this.calibration = { startedAt: performance.now(), durationMs: 1500, samples: [[], []] };
+          this.updateStatus("Calibrating: both players, hold your heads neutral for 1.5 seconds…");
+        }
+
+        finishCalibration() {
+          if (!this.calibration) return;
+          const missing = [];
+          this.tracks.forEach((track, slot) => {
+            const samples = this.calibration.samples[slot];
+            if (track && samples.length) {
+              track.neutralAngle =
+                samples.reduce((sum, value) => sum + value, 0) / samples.length;
+              track.filteredAngle = track.neutralAngle;
+              track.stableDirection = 0;
+              track.candidateDirection = 0;
+              track.candidateFrames = 0;
+            } else {
+              missing.push(`P${slot + 1}`);
+            }
+          });
+          this.calibration = null;
+          this.updateStatus(missing.length
+            ? `Tracking ready; ${missing.join(" and ")} not detected. Recalibrate when both players are visible.`
+            : "Ready: mirrored view — P1 is left, P2 is right. Tilt your head to move.");
+        }
+
+        swapPlayers() {
+          [this.tracks[0], this.tracks[1]] = [this.tracks[1], this.tracks[0]];
+          const first = this.controlState.player1;
+          this.controlState.player1 = this.controlState.player2;
+          this.controlState.player2 = first;
+          this.syncControls();
+          this.recalibrate();
+        }
+
+        getState() {
+          return JSON.parse(JSON.stringify(this.controlState));
+        }
+
+        drawMarkers(detections) {
+          const width = this.video.videoWidth || 640;
+          const height = this.video.videoHeight || 400;
+          if (this.overlay.width !== width || this.overlay.height !== height) {
+            this.overlay.width = width;
+            this.overlay.height = height;
+          }
+          const ctx = this.context;
+          ctx.clearRect(0, 0, width, height);
+          ctx.font = "900 18px 'Trebuchet MS', sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          this.tracks.forEach((track, slot) => {
+            if (!track?.lastDetection) return;
+            const detection = track.lastDetection;
+            if (!detections.includes(detection)) return;
+            const x = detection.center.x * width;
+            const y = Math.max(24, detection.center.y * height - 34);
+            ctx.fillStyle = slot === 0 ? "#ef4e9f" : "#25bed0";
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(x, y, 18, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = "#ffffff";
+            ctx.fillText(`P${slot + 1}`, x, y + 1);
+          });
+        }
+
+        processFrame() {
+          if (this.status !== "ready" || state.mode !== "multi") return;
+          try {
+            if (this.video.readyState >= 2 && this.video.currentTime !== this.lastVideoTime) {
+              this.lastVideoTime = this.video.currentTime;
+              const now = performance.now();
+              const result = this.landmarker.detectForVideo(this.video, now);
+              const detections = this.detectionsFromResult(result, now);
+              this.matchDetections(detections, now);
+              this.drawMarkers(detections);
+              this.syncControls();
+              if (!this.calibration) {
+                const detected = detections.length;
+                this.updateStatus(detected === 2
+                  ? "Tracking 2 players: P1 is left, P2 is right."
+                  : `Tracking ${detected}/2 players. Missing player controls stop immediately.`);
+              }
+            }
+          } catch (error) {
+            console.error("Face tracking frame failed.", error);
+            this.fail("Face tracking stopped unexpectedly. Keyboard controls are still active.");
+            return;
+          }
+          this.scheduleFrame();
+        }
+      }
+
+      const cameraController = new HeadTiltCameraController();
+      window.fruitySnowlandCamera = {
+        getState: () => cameraController.getState(),
+        start: () => cameraController.start(),
+        stop: () => cameraController.stop(),
+        recalibrate: () => cameraController.recalibrate(),
+        swapPlayers: () => cameraController.swapPlayers()
       };
 
       function safeScores() {
@@ -855,6 +1318,8 @@
         $("scoreLabel").textContent = multi ? "P1 SCORE" : "SCORE";
         $("secondScoreChip").hidden = !multi;
         $("bestScoreChip").hidden = multi;
+        $("cameraDock").hidden = !multi;
+        if (!multi) cameraController.stop();
         renderCharacterChoices();
       }
 
@@ -1643,8 +2108,9 @@
             if (state.mode === "multi") {
               state.players.forEach((player) => {
                 if (state.elapsed >= player.frozenUntil) {
-                  if (player.held.left) player.x -= moveSpeed;
-                  if (player.held.right) player.x += moveSpeed;
+                  const keyboardAxis = (player.held.right ? 1 : 0) - (player.held.left ? 1 : 0);
+                  const inputAxis = Math.max(-1, Math.min(1, keyboardAxis + player.cameraAxis));
+                  player.x += inputAxis * moveSpeed;
                 }
                 player.x = Math.max(.045, Math.min(.955, player.x));
               });
@@ -2014,6 +2480,10 @@
         $("playAgainButton").addEventListener("click", resetToStart);
         $("saveTwoPlayerScoresButton").addEventListener("click", submitTwoPlayerScores);
         $("modeSwitch").addEventListener("click", switchMode);
+        $("enableCameraButton").addEventListener("click", () => cameraController.start());
+        $("calibrateCameraButton").addEventListener("click", () => cameraController.recalibrate());
+        $("swapPlayersButton").addEventListener("click", () => cameraController.swapPlayers());
+        $("disableCameraButton").addEventListener("click", () => cameraController.stop());
         [$("playerOneInitials"), $("playerTwoInitials")].forEach((input, playerIndex) => {
           input.addEventListener("focus", () => {
             state.activeNicknamePlayer = playerIndex;
@@ -2097,6 +2567,7 @@
           });
         });
         window.addEventListener("resize", resizeCanvas);
+        window.addEventListener("pagehide", () => cameraController.stop());
       }
 
       state.scores = safeScores();
